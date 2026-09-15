@@ -4,12 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.*;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -17,71 +18,164 @@ import java.util.Random;
 public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
-        getWindow().setStatusBarColor(Color.rgb(7,12,20));
-        getWindow().setNavigationBarColor(Color.rgb(7,12,20));
+        getWindow().setStatusBarColor(Color.rgb(6,12,22));
+        getWindow().setNavigationBarColor(Color.rgb(6,12,22));
         setTitle("Monster Tamer: Generations");
         setContentView(new Game(this));
     }
 
     static class Game extends View {
         final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        final Paint t = new Paint(Paint.ANTI_ALIAS_FLAG);
+        final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Random rng = new Random();
         final SharedPreferences save;
         final Vibrator vibrator;
+        final ToneGenerator tone;
         final float den;
-        int screen=0, chapter=1, generation=1, year=8, zone=0, level=1, xp=0, gold=120, wins=0, tames=0, selected=0;
-        int enemy=0, enemyHp=0, playerHp=120, maxHp=120, dungeonFloor=0, weapon=0, armorId=0;
-        boolean boss=false, defending=false, married=false, children=false;
-        String spouse="";
-        final ArrayList<Integer> party=new ArrayList<>();
-        final boolean[] caught=new boolean[120];
-        final int[] monsterLevel=new int[120];
-        Bitmap hero, slime, metal, wolf, dragon, phoenix, golem;
-        final String[] monsters={"Azure Slime","Moss Slime","Ember Slime","Frost Slime","Spark Slime","Moon Slime","Iron Slime","Royal Slime","Bubble Beast","Mud Blob","Greenhorn Goblin","Redcap Goblin","Stone Goblin","Cave Orc","Hill Orc","Brutish Orc","Forest Troll","Stone Troll","Bog Troll","Cyclops","Wolf Pup","Dire Wolf","Moon Wolf","Frost Wolf","Thunder Hound","Wildcat","Sabertooth","Golden Lion","Horned Boar","Iron Boar","Tiny Drake","Red Drake","Blue Drake","Green Drake","Winged Dragon","Stone Dragon","Sea Dragon","Thunder Dragon","Ancient Dragon","Star Dragon","Baby Bat","Night Bat","Vampire Bat","Winged Imp","Red Imp","Blue Imp","Dark Imp","Demon Knight","Ash Demon","Void Demon","Forest Sprite","Leaf Fairy","Bloom Fairy","Mushroomkin","Mandrake","Treant","Ancient Treant","Dryad","Thorn Beast","Bramble King","Sand Scorpion","Rock Crab","Shellback","Cactus Crawler","Dune Beast","Desert Jackal","Sand Worm","Mirage Moth","Sun Beetle","Golden Scarab","River Fish","Piranha","Jellyfish","Sea Serpent","Coral Crab","Tide Turtle","Sharkling","Great Shark","Kraken Spawn","Deep Kraken","Snow Hare","Ice Wolf","Frost Ape","Yeti","Snow Golem","Ice Elemental","Aurora Bird","Glacier Bear","White Stag","Frost Queen","Tiny Golem","Clay Golem","Iron Golem","Obsidian Golem","Clockwork","Copper Knight","Silver Knight","Gold Knight","Crystal Giant","Titan","Ghost","Wisp","Haunted Doll","Bone Dog","Skeleton","Skeleton Mage","Wraith","Grave Knight","Phantom Dragon","Death Herald","Rainbow Bird","Phoenix Chick","Phoenix","Unicorn","Pegasus","Griffin","Chimera","Basilisk","Manticore","World Serpent"};
-        final String[] zones={"Greenvale","Whisperwood","Sunscar","Moonlit Coast","Frostpeak","Elder Ruins","Skyreach","Shadow Vale"};
-        final String[] towns={"Greenvale Village","Willowbrook","Dustmere","Coralport","Frostholm","Ruinhaven","Skyspire","Nightfall"};
-        final String[] chapters={"The First Bond","Whispers in the Woods","The Sunken Crown","Storm over Moonlit Coast","Heart of Frostpeak","The Elder Gate","Road to Skyreach","The World Serpent"};
-        final String[] chapterText={"A young tamer discovers that monsters can become friends, not just foes.","The hero crosses Whisperwood and learns that old magic is waking beneath the trees.","A lost royal relic points toward a kingdom swallowed by the sea.","Years pass. The hero becomes an adult, builds a home, and sails into a gathering storm.","A journey to Frostpeak reveals a prophecy: a family must stand together to save the realm.","The Elder Gate opens. A new generation inherits the bond with monsters.","The children join the adventure as the family travels to Skyreach and gathers its strongest allies.","Thirty years after the first bond, the family faces the World Serpent and chooses the fate of the realm."};
-        final String[] npcs={"Mira the Innkeeper","Tobin the Smith","Elder Rowan","Lyra the Ranger","Bram the Breeder","Sage Orin","Captain Vale","The Wandering Merchant"};
-        final String[] weapons={"Wooden Blade","Iron Sword","Knight Saber","Moonsteel","Dragonfang"};
-        final String[] armors={"Traveler Tunic","Leather Mail","Iron Plate","Frostguard","Elder Robe"};
-        Game(Context c){super(c);den=getResources().getDisplayMetrics().density;save=c.getSharedPreferences("monster_tamer_generations",0);vibrator=(Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);t.setTypeface(Typeface.create(Typeface.SERIF,Typeface.BOLD));setFocusable(true);load();loadSprites();}
-        void loadSprites(){hero=asset("hero.png");slime=asset("monster_slime.png");metal=asset("monster_metal.png");wolf=asset("monster_wolf.png");dragon=asset("monster_dragon.png");phoenix=asset("monster_phoenix.png");golem=asset("monster_golem.png");}
+
+        int screen = 0, chapter = 1, generation = 1, year = 8, zone = 0, level = 1, xp = 0, gold = 120;
+        int wins = 0, tames = 0, enemy = 0, enemyHp = 0, playerHp = 120, maxHp = 120;
+        int selected = 0, battleTurn = 0, anim = 0, weapon = 0, flash = 0;
+        boolean boss = false, defending = false, married = false, children = false;
+        String spouse = "";
+        final ArrayList<Integer> party = new ArrayList<>();
+        final boolean[] caught = new boolean[120];
+        final int[] monsterLevel = new int[120];
+
+        Bitmap heroWalk, worldMap;
+        final Bitmap[] monsterArt = new Bitmap[12];
+        final String[] monsterNames = {
+            "Azure Slime","Metal Slime","King Slime","Drake","Wyvern","Golem","Wolf","Tiger","Ogre","Demon","Phoenix","Unicorn",
+            "Green Slime","Red Slime","Blue Slime","Purple Slime","Gooey Slime","Liquid Slime","Muddy Slime","Slime Mage",
+            "Sparkle Slime","Giant Slime","Crystal Slime","Wild Boar","Great Boar","Bear","Ice Bear","Snow Tiger","Leopard","Sabertooth",
+            "Boar King","Lion","Panther","Hyena","Baby Dragon","Green Dragon","Red Dragon","Blue Dragon","Black Dragon","Ice Dragon",
+            "Golden Dragon","Ancient Dragon","Skeleton","Skeleton Archer","Zombie","Ghoul","Wight","Lich","Mummy","Ghost","Phantom",
+            "Bone Dragon","Dark Knight","Mandrake","Cactuar","Shroom","Mushroom King","Flower","Sunflower","Vine","Treant","Ent","Will-o-Wisp",
+            "Pumpkin","Carnivine","Blooming Flower","Roc Golem","Creeper","Fire Slime","Ice Slime","Wind Sprite","Earth Golem","Water Elemental",
+            "Lightning Sprite","Sand Golem","Lava Golem","Storm Elemental","Crystal Elemental","Fish","Shark","Giant Fish","Angler","Jellyfish",
+            "Octopus","Squid","Kraken","Sea Serpent","Mermaid","Water Dragon","Griffin","Pegasus","Unicorn Queen","Chimera","Basilisk",
+            "Hydra","Cerberus","Minotaur","Colossus","Jormungandr","Fenrir","Troll","Ogre King","Cyclops","Titan","Demon Lord","Archdemon",
+            "Nightmare","Behemoth","The Ancient One","Phoenix","Solar Phoenix","Star Phoenix","Goblin","Goblin King","Orc King","Slime Lord","Shadow Fenrir","World Serpent"
+        };
+        final String[] zones = {"Greenvale","Whisperwood","Sunscar","Moonlit Coast","Frostpeak","Elder Ruins","Skyreach","Shadow Vale"};
+        final String[] towns = {"Greenvale Village","Willowbrook","Dustmere","Coralport","Frostholm","Ruinhaven","Skyspire","Nightfall"};
+        final String[] chapters = {
+            "The First Bond","Whispers in the Woods","The Sunken Crown","Storm over Moonlit Coast",
+            "Heart of Frostpeak","The Elder Gate","Road to Skyreach","The World Serpent"
+        };
+        final String[] chapterText = {
+            "As a child, you discover a strange truth: a defeated monster may choose friendship instead of fleeing.",
+            "The old forest is waking. You meet rangers, merchants and a breeder who teaches you how to read a monster's heart.",
+            "A stolen crown lies beneath the coast. Your first voyage reveals that the kingdom's history is tied to the monster clans.",
+            "Years pass. You become an adult, build a home, and sail toward a storm that changes your family forever.",
+            "The mountains reveal a prophecy: when the Elder Gate opens, a family bond will be stronger than any single hero.",
+            "The Gate awakens. Your children inherit the journey and can fight beside the companions you raised.",
+            "Ships, sky roads and ancient ruins open new regions. Rare monsters begin appearing as your party grows.",
+            "Thirty years after the first bond, the World Serpent rises. Your family and monsters must decide the fate of the realm."
+        };
+        final String[] npcs = {"Mira the Innkeeper","Tobin the Smith","Elder Rowan","Lyra the Ranger","Bram the Breeder","Sage Orin","Captain Vale","The Wandering Merchant"};
+        final String[] weapons = {"Wooden Blade","Iron Sword","Knight Saber","Moonsteel","Dragonfang"};
+        final int[] weaponPower = {0,8,18,30,48};
+
+        Game(Context c) {
+            super(c); den=getResources().getDisplayMetrics().density;
+            save=c.getSharedPreferences("monster_tamer_generations",Context.MODE_PRIVATE);
+            vibrator=(Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
+            tone=new ToneGenerator(AudioManager.STREAM_MUSIC,70);
+            text.setTypeface(Typeface.create(Typeface.SERIF,Typeface.BOLD));
+            setFocusable(true); load(); loadArt(); postInvalidateDelayed(120);
+        }
+        float dp(float v){return v*den;} float W(){return getWidth();} float H(){return getHeight();}
         Bitmap asset(String n){try{return BitmapFactory.decodeStream(getContext().getAssets().open(n));}catch(Exception e){return null;}}
-        void load(){level=save.getInt("level",1);xp=save.getInt("xp",0);gold=save.getInt("gold",120);wins=save.getInt("wins",0);tames=save.getInt("tames",0);chapter=save.getInt("chapter",1);generation=save.getInt("generation",1);year=save.getInt("year",8);zone=save.getInt("zone",0);playerHp=save.getInt("hp",120);married=save.getBoolean("married",false);children=save.getBoolean("children",false);spouse=save.getString("spouse","");weapon=save.getInt("weapon",0);armorId=save.getInt("armor",0);dungeonFloor=save.getInt("dungeon",0);for(int i=0;i<120;i++){caught[i]=save.getBoolean("c"+i,false);monsterLevel[i]=save.getInt("m"+i,1);if(caught[i]&&party.size()<4&&!party.contains(i))party.add(i);}maxHp=90+level*30;if(party.isEmpty()){caught[0]=true;party.add(0);tames=Math.max(1,tames);}}
-        void persist(){SharedPreferences.Editor e=save.edit().putInt("level",level).putInt("xp",xp).putInt("gold",gold).putInt("wins",wins).putInt("tames",tames).putInt("chapter",chapter).putInt("generation",generation).putInt("year",year).putInt("zone",zone).putInt("hp",playerHp).putBoolean("married",married).putBoolean("children",children).putString("spouse",spouse).putInt("weapon",weapon).putInt("armor",armorId).putInt("dungeon",dungeonFloor);for(int i=0;i<120;i++)if(caught[i])e.putBoolean("c"+i,true).putInt("m"+i,monsterLevel[i]);e.apply();}
-        float X(float v){return v*den;} float W(){return getWidth();} float H(){return getHeight();}
-        void bg(Canvas c,int col){c.drawColor(col);} void box(Canvas c,float l,float y,float r,float b,int col){p.setColor(col);p.setStyle(Paint.Style.FILL);c.drawRoundRect(l,y,r,b,X(12),X(12),p);} void stroke(Canvas c,float l,float y,float r,float b,int col){p.setColor(col);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(X(2));c.drawRoundRect(l,y,r,b,X(12),X(12),p);p.setStyle(Paint.Style.FILL);} void txt(Canvas c,String s,float x,float y,float z,int col){t.setTextSize(X(z));t.setColor(col);t.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,t);} void left(Canvas c,String s,float x,float y,float z,int col){t.setTextSize(X(z));t.setColor(col);t.setTextAlign(Paint.Align.LEFT);c.drawText(s,x,y,t);} void btn(Canvas c,float l,float y,float r,float b,String s,int col){box(c,l,y,r,b,col);stroke(c,l,y,r,b,0xFF5C88B8);txt(c,s,(l+r)/2,y+(b-y)*.68f,14,Color.WHITE);}
-        @Override protected void onDraw(Canvas c){bg(c,0xFF0A1320);if(screen==0)title(c);else if(screen==1)world(c);else if(screen==2)battle(c);else if(screen==3)book(c);else if(screen==4)town(c);else if(screen==5)camp(c);else if(screen==6)story(c);else if(screen==7)equip(c);else if(screen==8)breed(c);else dungeon(c);}
-        void title(Canvas c){float w=W(),h=H();for(int y=0;y<12;y++)for(int x=0;x<8;x++){p.setColor((x+y)%2==0?0xFF294E39:0xFF356845);c.drawRect(x*w/8,y*h/12,(x+1)*w/8,(y+1)*h/12,p);}if(hero!=null)bmp(c,hero,w*.50f,h*.30f,X(72),X(105));else heroFallback(c,w*.5f,h*.3f);if(slime!=null)bmp(c,slime,w*.76f,h*.30f,X(70),X(70));txt(c,"MONSTER TAMER",w/2,X(82),31,Color.WHITE);txt(c,"GENERATIONS",w/2,X(116),19,0xFFFFD45A);txt(c,"A family • a world • 120 monster bonds",w/2,h*.50f,13,0xFFE2EDF7);btn(c,w*.12f,h*.58f,w*.88f,h*.66f,"CONTINUE ADVENTURE",0xFF173C5A);btn(c,w*.12f,h*.69f,w*.88f,h*.77f,"NEW JOURNEY",0xFF5C3B28);txt(c,"Childhood → Marriage → Children → Final Battle",w/2,h*.86f,12,Color.WHITE);}
-        void header(Canvas c,String s){p.setColor(0xFF16283D);c.drawRect(0,0,W(),X(66),p);txt(c,s,W()/2,X(41),20,Color.WHITE);} void nav(Canvas c){float h=H();p.setColor(0xFF14263A);c.drawRect(0,h-X(68),W(),h,p);String[] n={"MAP","BOOK","TOWN","CAMP"};for(int i=0;i<4;i++)txt(c,n[i],W()*(.125f+i*.25f),h-X(28),12,screen==i+1?0xFFFFD45A:Color.WHITE);}
-        void world(Canvas c){header(c,"WORLD MAP • "+zones[zone]);float top=X(76);for(int y=0;y<6;y++)for(int x=0;x<5;x++){p.setColor((x+y)%3==0?0xFF315F40:0xFF3E714A);c.drawRect(x*W()/5,top+y*X(65),(x+1)*W()/5,top+(y+1)*X(65),p);}p.setColor(0xFF2C77A0);p.setStrokeWidth(X(12));Path r=new Path();r.moveTo(0,top+H()*.18f);r.lineTo(W()*.30f,top+H()*.12f);r.lineTo(W()*.52f,top+H()*.30f);r.lineTo(W()*.80f,top+H()*.23f);r.lineTo(W(),top+H()*.36f);c.drawPath(r,p);for(int i=0;i<8;i++){float xx=W()*(.11f+(i%4)*.26f),yy=top+X(52)+(i/4)*X(142);p.setColor(i<chapter?0xFFFFD45A:0xFF657384);c.drawCircle(xx,yy,X(14),p);txt(c,""+(i+1),xx,yy+X(5),11,Color.DKGRAY);}box(c,W()*.06f,H()*.52f,W()*.94f,H()*.70f,0xE8162435);txt(c,chapters[Math.min(7,chapter-1)],W()/2,H()*.565f,18,0xFFFFD45A);txt(c,towns[zone],W()/2,H()*.615f,15,Color.WHITE);txt(c,"Year "+year+" • Generation "+generation+" • Chapter "+chapter+"/8",W()/2,H()*.66f,12,0xFFD6E4F5);btn(c,W()*.09f,H()*.73f,W()*.44f,H()*.81f,"EXPLORE",0xFF244F69);btn(c,W()*.56f,H()*.73f,W()*.91f,H()*.81f,"STORY",0xFF5A3D2B);nav(c);}
-        void battle(Canvas c){header(c,boss?"BOSS • WORLD SERPENT":"WILD ENCOUNTER");Bitmap bm=monsterFor(enemy);if(bm!=null)bmp(c,bm,W()*.72f,X(155),boss?X(105):X(78),boss?X(105):X(78));else monsterFallback(c,W()*.72f,X(155),enemy);txt(c,boss?"World Serpent":monsters[enemy],W()*.72f,X(220),16,Color.WHITE);bar(c,W()*.50f,X(236),W()*.94f,X(254),enemyHp,enemyMax());if(hero!=null)bmp(c,hero,W()*.23f,X(330),X(66),X(98));else heroFallback(c,W()*.23f,X(330));txt(c,"Hero • Lv "+level,W()*.23f,X(388),14,Color.WHITE);txt(c,"HP "+playerHp+" / "+maxHp,W()*.23f,X(412),12,0xFFFFD45A);txt(c,children?"Family Assist ready":(married?"Spouse bond +5%":""),W()*.23f,X(438),11,0xFFBDEBC9);String[] a={"ATTACK","SKILL","TAME","GUARD","ITEM","RUN"};for(int i=0;i<6;i++){float l=i%2==0?W()*.07f:W()*.53f,y=X(455)+(i/2)*X(50);btn(c,l,y,l+W()*.40f,y+X(40),a[i],i==2?0xFF70482D:0xFF234A68);}txt(c,boss?"The final boss cannot be tamed.":"Weaken a monster to improve the taming chance.",W()/2,H()-X(82),11,0xFFD6E4F5);}
-        void book(Canvas c){header(c,"MONSTER COMPENDIUM • "+tames+" / 120");int st=(selected/15)*15;for(int i=0;i<15;i++){int id=st+i;if(id>=120)break;float xx=W()*(.17f+(i%3)*.33f),yy=X(96)+(i/3)*X(76);Bitmap bm=monsterFor(id);if(bm!=null)bmp(c,bm,xx,yy,X(43),X(43));else monsterFallback(c,xx,yy,id);txt(c,caught[id]?monsters[id]:"???",xx,yy+X(27),9,caught[id]?Color.WHITE:0xFF718196);}txt(c,"Page "+(st/15+1)+" / 8 • Tap to browse",W()/2,H()-X(82),12,0xFFFFD45A);nav(c);}
-        void town(Canvas c){header(c,towns[zone]);txt(c,"TOWN & FAMILY",W()/2,X(94),17,0xFFFFD45A);for(int i=0;i<5;i++){float y=X(115)+i*X(60);box(c,W()*.07f,y,W()*.93f,y+X(48),0xFF1C3044);left(c,npcs[(zone+i)%npcs.length],W()*.12f,y+X(21),13,Color.WHITE);txt(c,new String[]{"INN","SMITH","QUEST","BREED","SHOP"}[i],W()*.79f,y+X(30),12,0xFFFFD45A);}box(c,W()*.07f,H()*.58f,W()*.93f,H()*.73f,0xFF274B38);txt(c,"Chapter "+chapter+": "+chapters[chapter-1],W()/2,H()*.625f,14,Color.WHITE);txt(c,married?"Family home: "+spouse:"The road will shape your family.",W()/2,H()*.675f,12,0xFFD6E4F5);nav(c);}
-        void camp(Canvas c){header(c,"TAMER'S CAMP");txt(c,"ACTIVE MONSTER PARTY",W()/2,X(95),17,0xFFFFD45A);for(int i=0;i<4;i++){float xx=W()*(.125f+i*.25f);if(i<party.size()){int id=party.get(i);Bitmap bm=monsterFor(id);if(bm!=null)bmp(c,bm,xx,X(145),X(50),X(50));else monsterFallback(c,xx,X(145),id);txt(c,monsters[id],xx,X(190),9,Color.WHITE);txt(c,"Lv "+monsterLevel[id],xx,X(208),9,0xFFFFD45A);}else txt(c,"EMPTY",xx,X(160),10,0xFF8090A2);}box(c,W()*.07f,X(230),W()*.93f,X(305),0xFF213A4C);txt(c,"FAMILY",W()/2,X(258),16,0xFFFFD45A);txt(c,"Generation "+generation+" • Year "+year,W()/2,X(282),12,Color.WHITE);txt(c,married?"Spouse: "+spouse:"Not married yet",W()/2,X(301),11,0xFFD6E4F5);if(children){box(c,W()*.07f,X(320),W()*.93f,X(382),0xFF3A4C32);txt(c,"CHILDREN HAVE JOINED THE QUEST",W()/2,X(347),13,Color.WHITE);txt(c,"Family Assist: +15% skill power",W()/2,X(370),11,0xFFBDEBC9);}btn(c,W()*.09f,X(405),W()*.44f,X(468),"HEAL • 10 G",0xFF244F69);btn(c,W()*.56f,X(405),W()*.91f,X(468),"DUNGEON",0xFF5A3D2B);nav(c);}
-        void story(Canvas c){header(c,"CHAPTER "+chapter+" • "+chapters[chapter-1]);txt(c,"YEAR "+year+" • GENERATION "+generation,W()/2,X(92),12,0xFFFFD45A);txt(c,chapterText[chapter-1],W()/2,X(128),13,Color.WHITE);if(chapter==5&&!married){box(c,W()*.08f,X(165),W()*.92f,X(285),0xFF332B47);txt(c,"Choose a life partner",W()/2,X(193),18,0xFFFFD45A);btn(c,W()*.12f,X(215),W()*.43f,X(268),"LYRA",0xFF35577A);btn(c,W()*.57f,X(215),W()*.88f,X(268),"MIRA",0xFF714E61);}else{box(c,W()*.08f,X(165),W()*.92f,X(285),0xFF1E3145);txt(c,chapter==8?"THE FINAL CHOICE":"STORY MILESTONE",W()/2,X(195),17,0xFFFFD45A);txt(c,chapter==4?"The hero reaches adulthood and gains a ship.":chapter==6?"The Elder Gate awakens the family's inherited bond.":chapter==7?"Your children take their place beside you.":"The road continues.",W()/2,X(230),12,Color.WHITE);btn(c,W()*.14f,X(238),W()*.86f,X(278),chapter==8?"FACE THE WORLD SERPENT":"ADVANCE STORY",0xFF5A3D2B);}txt(c,"Your choices are saved automatically.",W()/2,H()-X(65),11,0xFF9FB2C7);}
-        void equip(Canvas c){header(c,"ARMORY & EQUIPMENT");txt(c,"HERO",W()*.25f,X(95),16,0xFFFFD45A);txt(c,"Weapon: "+weapons[weapon],W()*.25f,X(126),12,Color.WHITE);txt(c,"Armor: "+armors[armorId],W()*.25f,X(151),12,Color.WHITE);txt(c,"ATK +"+(weapon*9)+"  DEF +"+(armorId*10),W()*.25f,X(178),12,Color.WHITE);for(int i=1;i<5;i++){float y=X(215)+(i-1)*X(58);box(c,W()*.08f,y,W()*.92f,y+X(46),0xFF20384C);txt(c,weapons[i],W()*.33f,y+X(20),12,Color.WHITE);txt(c,(70+i*100)+" G",W()*.78f,y+X(28),11,0xFFFFD45A);}btn(c,W()*.12f,H()*.76f,W()*.88f,H()*.84f,"BUY NEXT WEAPON",0xFF5A3D2B);}
-        void breed(Canvas c){header(c,"BREEDING GROVE");txt(c,"Breed two bonded monsters for a rare offspring.",W()/2,X(95),12,0xFFD6E4F5);if(party.size()>=2){int a=party.get(0),b=party.get(1);Bitmap aa=monsterFor(a),bb=monsterFor(b);if(aa!=null)bmp(c,aa,W()*.28f,X(165),X(62),X(62));if(bb!=null)bmp(c,bb,W()*.72f,X(165),X(62),X(62));txt(c,monsters[a],W()*.28f,X(210),10,Color.WHITE);txt(c,"+",W()/2,X(173),24,0xFFFFD45A);txt(c,monsters[b],W()*.72f,X(210),10,Color.WHITE);btn(c,W()*.12f,X(245),W()*.88f,X(305),"HATCH EGG • 75 G",0xFF5A3D2B);}else txt(c,"Tame two monsters first.",W()/2,X(165),16,Color.WHITE);txt(c,"Inherited skills and rare variants can appear.",W()/2,X(350),11,0xFFD6E4F5);}
-        void dungeon(Canvas c){header(c,"ANCIENT DUNGEON • FLOOR "+(dungeonFloor+1));txt(c,"Rooms hide rare monsters, treasure and bosses.",W()/2,X(94),12,0xFFD6E4F5);for(int i=0;i<9;i++){float xx=W()*.10f+(i%3)*W()*.30f,y=X(120)+(i/3)*X(75);box(c,xx,y,xx+W()*.23f,y+X(56),i==dungeonFloor%9?0xFF6A4A2F:0xFF24384A);txt(c,i==8?"BOSS":"ROOM "+(i+1),xx+W()*.115f,y+X(34),11,Color.WHITE);}btn(c,W()*.14f,X(370),W()*.86f,X(430),"ENTER NEXT ROOM",0xFF244F69);}
-        Bitmap monsterFor(int id){int k=id%6;return k==0?slime:k==1?metal:k==2?wolf:k==3?dragon:k==4?phoenix:golem;}
-        void bmp(Canvas c,Bitmap b,float cx,float cy,float dw,float dh){Rect src=new Rect(0,0,b.getWidth(),b.getHeight());RectF dst=new RectF(cx-dw/2,cy-dh/2,cx+dw/2,cy+dh/2);p.setFilterBitmap(false);c.drawBitmap(b,src,dst,p);}
-        void heroFallback(Canvas c,float x,float y){p.setColor(0xFF244B7A);c.drawCircle(x,y,X(24),p);p.setColor(0xFFE4B68A);c.drawCircle(x,y-X(28),X(18),p);p.setColor(0xFF273B64);c.drawRect(x-X(18),y-X(45),x+X(18),y-X(30),p);}
-        void monsterFallback(Canvas c,float x,float y,int id){float q=X(25);p.setColor(0xFF000000|(((id*47+70)&255)<<16)|(((id*83+110)&255)<<8)|((id*131+150)&255));c.drawOval(new RectF(x-q,y-q*.7f,x+q,y+q*.8f),p);p.setColor(Color.WHITE);c.drawCircle(x-q*.35f,y-q*.15f,X(5),p);c.drawCircle(x+q*.35f,y-q*.15f,X(5),p);}
-        void bar(Canvas c,float l,float y,float r,float b,int val,int max){box(c,l,y,r,b,0xFF101B29);float pct=Math.max(0,Math.min(1,val/(float)Math.max(1,max)));box(c,l,y,l+(r-l)*pct,b,0xFFB94242);}
-        int enemyMax(){return boss?360+chapter*60:45+enemy%35+level*8;}
-        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;float x=e.getX(),y=e.getY();if(screen==0){if(y>H()*.55f&&y<H()*.80f){screen=1;invalidate();}return true;}if(screen==1){if(y>H()*.70f&&y<H()*.84f){if(x<W()*.5f)encounter();else screen=6;invalidate();}else if(y>H()-X(80))navTap(x);return true;}if(screen==2){battleTap(x,y);return true;}if(screen==3){if(y>H()-X(80))navTap(x);else{selected=Math.min(119,selected+1);invalidate();}return true;}if(screen==4){if(y>H()-X(80))navTap(x);else if(y>X(230)&&y<X(320)){screen=8;invalidate();}else if(y>X(115)&&y<X(175)){playerHp=maxHp;gold=Math.max(0,gold-10);toast("Rested at the inn.");invalidate();}return true;}if(screen==5){if(y>H()-X(80))navTap(x);else if(y>X(395)&&y<X(480)&&x>W()*.5f){screen=9;invalidate();}else if(y>X(395)&&y<X(480)){playerHp=maxHp;gold=Math.max(0,gold-10);toast("Party restored.");invalidate();}return true;}if(screen==6){storyTap(x,y);return true;}if(screen==7){if(y>H()*.70f&&weapon<4&&gold>=70+weapon*100){gold-=70+weapon*100;weapon++;toast("Equipped "+weapons[weapon]);persist();invalidate();}return true;}if(screen==8){if(y>X(235)&&y<X(320)&&party.size()>=2&&gold>=75){gold-=75;int id=(party.get(0)+party.get(1)+chapter*3)%120;caught[id]=true;tames++;monsterLevel[id]=Math.max(1,level);if(party.size()<4)party.add(id);toast("Egg hatched: "+monsters[id]);persist();invalidate();}return true;}if(screen==9){if(y>X(350)&&y<X(450)){if(dungeonFloor%9==8){boss=true;enemy=119;enemyHp=enemyMax();screen=2;}else{dungeonFloor++;encounter();}persist();invalidate();}return true;}return true;}
-        void navTap(float x){if(x<W()*.25f)screen=1;else if(x<W()*.5f)screen=3;else if(x<W()*.75f)screen=4;else screen=5;invalidate();}
-        void battleTap(float x,float y){int row=(int)((y-X(455))/X(50)),col=x<W()*.5f?0:1,a=row*2+col;if(a<0||a>5)return;if(a==0)attack();else if(a==1)skill();else if(a==2)tame();else if(a==3)guard();else if(a==4)item();else run();invalidate();}
-        void attack(){enemyHp-=14+level*4+weapon*9+rng.nextInt(10)+(children?6:0);if(enemyHp<=0){winBattle();return;}enemyTurn();}
-        void skill(){enemyHp-=22+level*5+armorId*2+(children?12:0);playerHp=Math.min(maxHp,playerHp+8);if(enemyHp<=0){winBattle();return;}enemyTurn();}
-        void tame(){if(boss){toast("Boss monsters cannot be tamed.");enemyTurn();return;}int chance=22+(enemyHp<enemyMax()/3?42:0)+(level>enemy/10?12:0);if(rng.nextInt(100)<chance){caught[enemy]=true;tames++;monsterLevel[enemy]=Math.max(1,level);if(party.size()<4)party.add(enemy);toast("Tamed "+monsters[enemy]+"!");winBattle();}else{toast("It resisted the bond!");enemyTurn();}}
-        void guard(){defending=true;enemyTurn();} void item(){if(gold>=12){gold-=12;playerHp=Math.min(maxHp,playerHp+45);toast("Potion restored HP.");enemyTurn();}else toast("Not enough gold.");} void run(){if(rng.nextInt(100)<65){toast("Escaped!");screen=1;boss=false;}else{toast("Couldn't escape!");enemyTurn();}}
-        void enemyTurn(){int dmg=6+rng.nextInt(10)+enemy%8+(boss?8:0);if(defending)dmg/=2;playerHp=Math.max(0,playerHp-dmg);defending=false;if(playerHp==0){gold=Math.max(0,gold-15);playerHp=maxHp;screen=1;boss=false;toast("Your family rescued you at the inn.");}}
-        void winBattle(){wins++;gold+=18+enemy%20;xp+=25+enemy%15;for(int id:party)monsterLevel[id]++;if(xp>=level*55){xp-=level*55;level++;maxHp=90+level*30;playerHp=maxHp;toast("Level up! Lv "+level);}if(boss){toast("The World Serpent falls! The family saves the realm.");chapter=8;screen=6;}else{screen=1;zone=Math.min(7,(wins/3)%8);}boss=false;persist();}
-        void encounter(){boss=false;enemy=Math.min(119,zone*15+rng.nextInt(15));enemyHp=enemyMax();screen=2;invalidate();}
-        void storyTap(float x,float y){if(chapter==5&&!married&&y>X(200)&&y<X(300)){married=true;spouse=x<W()/2?"Lyra the Ranger":"Mira the Innkeeper";generation=2;year=20;toast("You married "+spouse+".");persist();invalidate();return;}if(y>X(220)&&y<X(310)){if(chapter<8){chapter++;if(chapter==4){generation=2;year=18;}if(chapter==6){generation=3;year=24;}if(chapter==7){children=true;year=30;}if(chapter==8)year=30;zone=Math.min(7,chapter-1);persist();invalidate();}else{boss=true;enemy=119;enemyHp=enemyMax();screen=2;invalidate();}}}
-        void toast(String s){Toast.makeText(getContext(),s,Toast.LENGTH_SHORT).show();try{if(vibrator!=null&&android.os.Build.VERSION.SDK_INT>=26)vibrator.vibrate(VibrationEffect.createOneShot(35,VibrationEffect.DEFAULT_AMPLITUDE));}catch(Exception ignored){}}
+        void loadArt(){
+            heroWalk=asset("hero_walk.png"); worldMap=asset("world_map.png");
+            String[] f={"slime.png","metal.png","king_slime.png","dragon.png","wyvern.png","golem.png","wolf.png","tiger.png","ogre.png","demon.png","phoenix.png","unicorn.png"};
+            for(int i=0;i<f.length;i++)monsterArt[i]=asset(f[i]);
+        }
+        void load(){
+            level=save.getInt("level",1); xp=save.getInt("xp",0); gold=save.getInt("gold",120); wins=save.getInt("wins",0); tames=save.getInt("tames",0);
+            chapter=save.getInt("chapter",1); generation=save.getInt("generation",1); year=save.getInt("year",8); zone=save.getInt("zone",0);
+            playerHp=save.getInt("hp",120); married=save.getBoolean("married",false); children=save.getBoolean("children",false); spouse=save.getString("spouse",""); weapon=save.getInt("weapon",0);
+            for(int i=0;i<120;i++){caught[i]=save.getBoolean("c"+i,false);monsterLevel[i]=save.getInt("m"+i,1);if(caught[i]&&party.size()<4)party.add(i);}
+            maxHp=100+level*24; if(party.isEmpty()){caught[0]=true;party.add(0);tames=Math.max(1,tames);} if(playerHp<=0||playerHp>maxHp)playerHp=maxHp;
+        }
+        void persist(){
+            SharedPreferences.Editor e=save.edit().putInt("level",level).putInt("xp",xp).putInt("gold",gold).putInt("wins",wins).putInt("tames",tames).putInt("chapter",chapter).putInt("generation",generation).putInt("year",year).putInt("zone",zone).putInt("hp",playerHp).putBoolean("married",married).putBoolean("children",children).putString("spouse",spouse).putInt("weapon",weapon);
+            for(int i=0;i<120;i++)if(caught[i])e.putBoolean("c"+i,true).putInt("m"+i,monsterLevel[i]); e.apply();
+        }
+        void beep(boolean good){try{tone.startTone(good?ToneGenerator.TONE_PROP_ACK:ToneGenerator.TONE_PROP_NACK,90);}catch(Exception ignored){} try{if(vibrator!=null)vibrator.vibrate(VibrationEffect.createOneShot(24,45));}catch(Exception ignored){}}
+        void box(Canvas c,float l,float y,float r,float b,int col){p.setStyle(Paint.Style.FILL);p.setColor(col);c.drawRoundRect(l,y,r,b,dp(10),dp(10),p);}
+        void outline(Canvas c,float l,float y,float r,float b,int col){p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(2));p.setColor(col);c.drawRoundRect(l,y,r,b,dp(10),dp(10),p);p.setStyle(Paint.Style.FILL);}
+        void label(Canvas c,String s,float x,float y,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,text);}
+        void left(Canvas c,String s,float x,float y,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.LEFT);c.drawText(s,x,y,text);}
+        void button(Canvas c,float l,float y,float r,float b,String s,int col){box(c,l,y,r,b,col);outline(c,l,y,r,b,0xFF5C8BB8);label(c,s,(l+r)/2,y+(b-y)*.67f,13,Color.WHITE);}
+        void bmp(Canvas c,Bitmap bm,float cx,float cy,float w,float h){if(bm==null)return;p.setFilterBitmap(false);c.drawBitmap(bm,null,new RectF(cx-w/2,cy-h/2,cx+w/2,cy+h/2),p);}
+
+        @Override protected void onDraw(Canvas c){c.drawColor(0xFF071321);if(screen==0)title(c);else if(screen==1)world(c);else if(screen==2)battle(c);else if(screen==3)book(c);else if(screen==4)town(c);else if(screen==5)party(c);else if(screen==6)story(c);else breed(c);anim++;if(flash>0)flash--;postInvalidateDelayed(120);}
+        void title(Canvas c){
+            if(worldMap!=null)bmp(c,worldMap,W()/2,H()*.32f,W()*.94f,H()*.50f);p.setColor(0xAA071321);c.drawRect(0,0,W(),H(),p);
+            label(c,"MONSTER TAMER",W()/2,dp(100),30,Color.WHITE);label(c,"GENERATIONS",W()/2,dp(132),18,0xFFFFD45A);label(c,"A family • a world • 120 monster bonds",W()/2,dp(168),12,0xFFD5E5F5);
+            if(heroWalk!=null)bmp(c,heroWalk,W()/2+(float)Math.sin(anim*.08)*dp(5),H()*.33f,dp(95),dp(120));
+            if(monsterArt[0]!=null)bmp(c,monsterArt[0],W()*.76f,H()*.35f,dp(85),dp(85));if(monsterArt[3]!=null)bmp(c,monsterArt[3],W()*.24f,H()*.35f,dp(100),dp(90));
+            button(c,W()*.12f,H()*.57f,W()*.88f,H()*.65f,"CONTINUE ADVENTURE",0xFF1C4D70);button(c,W()*.12f,H()*.68f,W()*.88f,H()*.76f,"NEW JOURNEY",0xFF634027);
+            label(c,"Childhood  →  Marriage  →  Children  →  Final Battle",W()/2,H()*.84f,11,Color.WHITE);label(c,"Tap to begin",W()/2,H()*.91f,10,0xFF9BB7D1);
+        }
+        void header(Canvas c,String s){p.setColor(0xFF12263C);c.drawRect(0,0,W(),dp(64),p);label(c,s,W()/2,dp(39),19,Color.WHITE);}
+        void nav(Canvas c){float y=H()-dp(65);p.setColor(0xFF102238);c.drawRect(0,y,W(),H(),p);String[] n={"MAP","BOOK","TOWN","PARTY","BREED"};for(int i=0;i<5;i++)label(c,n[i],W()*(.10f+i*.20f),H()-dp(27),11,Color.WHITE);}
+        void world(Canvas c){
+            header(c,"WORLD • "+zones[zone]);if(worldMap!=null)bmp(c,worldMap,W()/2,H()*.33f,W()*.92f,H()*.44f);
+            box(c,W()*.05f,H()*.52f,W()*.95f,H()*.70f,0xE8172B40);label(c,chapters[chapter-1],W()/2,H()*.57f,18,0xFFFFD45A);label(c,towns[zone],W()/2,H()*.615f,14,Color.WHITE);
+            label(c,"Year "+year+" • Generation "+generation+" • Chapter "+chapter+"/8",W()/2,H()*.655f,11,0xFFD4E3F2);
+            button(c,W()*.08f,H()*.73f,W()*.43f,H()*.81f,"EXPLORE",0xFF24536C);button(c,W()*.48f,H()*.73f,W()*.71f,H()*.81f,"STORY",0xFF63432D);button(c,W()*.76f,H()*.73f,W()*.92f,H()*.81f,"NEXT",0xFF3B5E45);nav(c);
+        }
+        void battle(Canvas c){
+            header(c,boss?"FINAL BATTLE • WORLD SERPENT":"WILD ENCOUNTER");p.setColor(0xFF142F31);c.drawRect(0,dp(64),W(),H(),p);
+            p.setColor(0xFF234E51);c.drawCircle(W()*.72f,dp(145),dp(68),p);p.setColor(0xFF1A383A);c.drawOval(W()*.35f,H()*.43f,W()*.98f,H()*.68f,p);
+            Bitmap enemyBm=monsterFor(enemy);float bob=(float)Math.sin(anim*.12)*dp(4);if(enemyBm!=null)bmp(c,enemyBm,W()*.72f,dp(185)+bob,boss?dp(135):dp(92),boss?dp(125):dp(90));
+            label(c,boss?"World Serpent":monsterDisplayName(enemy),W()*.72f,dp(250),15,Color.WHITE);bar(c,W()*.48f,dp(264),W()*.94f,dp(281),enemyHp,enemyMax(),0xFFD04D5B);
+            if(heroWalk!=null)bmp(c,heroWalk,W()*.23f,dp(345),dp(88),dp(110));label(c,"Hero  Lv."+level,W()*.23f,dp(408),14,Color.WHITE);label(c,"HP "+playerHp+" / "+maxHp,W()*.23f,dp(431),11,0xFFFFD45A);label(c,"Bonded "+party.size()+"/4",W()*.23f,dp(452),10,0xFFBDEBC9);
+            String[] a={"ATTACK","SKILL","TAME","GUARD","ITEM","RUN"};for(int i=0;i<6;i++){float l=i%2==0?W()*.06f:W()*.53f,y=dp(470)+(i/2)*dp(48);button(c,l,y,l+W()*.41f,y+dp(38),a[i],i==2?0xFF70472E:0xFF244B68);}
+            if(flash>0){p.setColor(0x55FFFFFF);c.drawRect(0,0,W(),H(),p);}label(c,boss?"The final boss cannot be tamed.":"Weaken it before TAME for better odds.",W()/2,H()-dp(88),10,0xFFD5E5F5);
+        }
+        void bar(Canvas c,float l,float y,float r,float b,int value,int max,int col){box(c,l,y,r,b,0xFF0A1724);float q=Math.max(0,Math.min(1,value/(float)Math.max(1,max)));p.setColor(col);c.drawRoundRect(l+dp(2),y+dp(2),l+dp(2)+(r-l-dp(4))*q,b-dp(2),dp(6),dp(6),p);}
+        int enemyMax(){return 70+chapter*22+(boss?160:enemy%5*10);} 
+        String monsterDisplayName(int id){return id<monsterNames.length?monsterNames[id]:"Unknown Monster";}
+        Bitmap monsterFor(int id){if(id<0)return null;return monsterArt[id%monsterArt.length];}
+        void book(Canvas c){
+            header(c,"MONSTER BOOK • "+tames+" / 120");int page=selected/12,start=page*12;for(int i=0;i<12;i++){int id=start+i;if(id>=120)break;float x=W()*(.17f+(i%3)*.33f),y=dp(105)+(i/3)*dp(78);Bitmap bm=monsterFor(id);if(caught[id]&&bm!=null)bmp(c,bm,x,y,dp(52),dp(52));else{p.setColor(0xFF243446);c.drawCircle(x,y,dp(24),p);label(c,"?",x,y+dp(8),20,0xFF73869B);}label(c,caught[id]?monsterDisplayName(id):"???",x,y+dp(31),9,caught[id]?Color.WHITE:0xFF718196);}label(c,"Page "+(page+1)+" / 10 • Tap left/right to browse",W()/2,H()-dp(83),11,0xFFFFD45A);nav(c);
+        }
+        void town(Canvas c){
+            header(c,towns[zone]);label(c,"FAMILY TOWN",W()/2,dp(92),17,0xFFFFD45A);String[] jobs={"INN • heal party","SMITH • upgrade weapon","BREEDER • raise bonds","QUEST • advance story","SHOP • buy supplies"};
+            for(int i=0;i<5;i++){float y=dp(112)+i*dp(54);box(c,W()*.06f,y,W()*.94f,y+dp(44),0xFF1A3045);left(c,npcs[(zone+i)%npcs.length],W()*.10f,y+dp(19),12,Color.WHITE);left(c,jobs[i],W()*.10f,y+dp(36),9,0xFF9DB6CE);}
+            box(c,W()*.06f,H()*.54f,W()*.94f,H()*.69f,0xE8172B40);label(c,married?"Married to "+spouse:"Not married yet",W()/2,H()*.59f,14,0xFFFFD45A);label(c,children?"Your children are ready to join the quest.":"The next generation awaits.",W()/2,H()*.635f,10,Color.WHITE);nav(c);
+        }
+        void party(Canvas c){
+            header(c,"PARTY • FAMILY & MONSTERS");label(c,"Hero  Lv."+level+"   HP "+playerHp+"/"+maxHp+"   Gold "+gold,W()/2,dp(91),12,Color.WHITE);if(heroWalk!=null)bmp(c,heroWalk,W()*.18f,dp(142),dp(60),dp(75));label(c,married?"Spouse • "+spouse:"Childhood Hero",W()*.18f,dp(190),10,0xFFFFD45A);
+            for(int i=0;i<4;i++){float y=dp(225)+i*dp(76);box(c,W()*.07f,y,W()*.93f,y+dp(62),0xFF182D42);if(i<party.size()){int id=party.get(i);Bitmap bm=monsterFor(id);if(bm!=null)bmp(c,bm,W()*.20f,y+dp(30),dp(48),dp(48));left(c,monsterDisplayName(id),W()*.32f,y+dp(25),13,Color.WHITE);left(c,"Lv."+monsterLevel[id]+" • Bond "+(monsterLevel[id]*12)+"%",W()*.32f,y+dp(46),10,0xFF9FC1DA);}else left(c,"Empty slot",W()*.32f,y+dp(35),12,0xFF687B8F);}nav(c);
+        }
+        void story(Canvas c){
+            header(c,"CHAPTER "+chapter+" • "+chapters[chapter-1]);label(c,"YEAR "+year+"   •   GENERATION "+generation,W()/2,dp(90),11,0xFFFFD45A);box(c,W()*.07f,dp(110),W()*.93f,H()*.58f,0xFF13263A);label(c,chapters[chapter-1],W()/2,dp(145),19,Color.WHITE);wrap(c,chapterText[chapter-1],W()*.13f,dp(190),W()*.87f,22,13,0xFFD6E5F2);
+            if(chapter==4&&!married)button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"MARRY LYRA • BEGIN A FAMILY",0xFF70404E);else if(chapter>=6&&!children)button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"RAISE THE NEXT GENERATION",0xFF4E6640);else button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"ADVANCE CHAPTER",0xFF24536C);
+            button(c,W()*.12f,H()*.76f,W()*.88f,H()*.84f,"RETURN TO MAP",0xFF263E55);
+        }
+        void wrap(Canvas c,String s,float l,float y,float r,float lh,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.LEFT);String[] words=s.split(" ");String line="";for(String w:words){String test=line.length()==0?w:line+" "+w;if(text.measureText(test)>r-l){c.drawText(line,l,y,text);y+=dp(lh);line=w;}else line=test;}if(line.length()>0)c.drawText(line,l,y,text);}
+        void breed(Canvas c){
+            header(c,"BREEDING • THE FAMILY BOND");label(c,"Combine two bonded monsters to raise a stronger heir.",W()/2,dp(94),11,0xFFD6E5F2);box(c,W()*.08f,dp(120),W()*.92f,dp(270),0xFF172B40);int a=party.size()>0?party.get(0):0,b=party.size()>1?party.get(1):0;if(monsterFor(a)!=null)bmp(c,monsterFor(a),W()*.28f,dp(190),dp(75),dp(75));if(monsterFor(b)!=null)bmp(c,monsterFor(b),W()*.72f,dp(190),dp(75),dp(75));label(c,monsterDisplayName(a),W()*.28f,dp(242),11,Color.WHITE);label(c,monsterDisplayName(b),W()*.72f,dp(242),11,Color.WHITE);label(c,"✦",W()/2,dp(198),28,0xFFFFD45A);
+            button(c,W()*.18f,dp(300),W()*.82f,dp(360),"BREED • 40 GOLD",0xFF5C4930);box(c,W()*.08f,dp(390),W()*.92f,dp(500),0xFF13263A);wrap(c,"Breeding creates a new bonded monster, increases its starting level, and can unlock rare evolution paths.",W()*.12f,dp(425),W()*.88f,21,12,Color.WHITE);nav(c);
+        }
+        void startEncounter(boolean finalBoss){boss=finalBoss;enemy=finalBoss?11:rng.nextInt(18);enemyHp=enemyMax();battleTurn=0;defending=false;screen=2;beep(true);invalidate();}
+        void winBattle(){wins++;gold+=18+chapter*8;xp+=28+chapter*14;while(xp>=level*80){xp-=level*80;level++;maxHp=100+level*24;playerHp=maxHp;}for(int id:party)monsterLevel[id]=Math.min(30,monsterLevel[id]+1);if(chapter<8&&wins%3==0)chapter=Math.min(8,chapter+1);playerHp=Math.min(maxHp,playerHp+20);persist();}
+        void attack(){int dmg=18+level*3+weaponPower[weapon]+rng.nextInt(10);enemyHp-=dmg;battleTurn++;beep(true);if(enemyHp<=0){winBattle();screen=1;return;}enemyTurn();}
+        void skill(){int dmg=28+level*4+weapon*5+rng.nextInt(16);enemyHp-=dmg;battleTurn++;flash=8;beep(true);if(enemyHp<=0){winBattle();screen=1;return;}enemyTurn();}
+        void enemyTurn(){int dmg=8+chapter*3+rng.nextInt(12);if(defending)dmg/=2;playerHp-=dmg;defending=false;if(playerHp<=0){playerHp=maxHp/2;gold=Math.max(0,gold-25);persist();screen=1;}}
+        void tame(){if(boss){beep(false);return;}int chance=25+(enemyMax()-enemyHp)*55/enemyMax()+Math.min(15,chapter*2);if(rng.nextInt(100)<chance){int id=enemy%120;if(!caught[id]){caught[id]=true;tames++;if(party.size()<4)party.add(id);}monsterLevel[id]=Math.max(1,level);gold+=8;persist();beep(true);screen=1;}else{beep(false);enemyTurn();}}
+        void nextChapter(){if(chapter<8){chapter++;year+=3;zone=Math.min(7,chapter-1);}persist();screen=1;beep(true);}
+        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;float x=e.getX(),y=e.getY();if(screen==0){screen=1;invalidate();return true;}
+            if(screen==1){if(y>H()*.71f&&y<H()*.84f){if(x<W()*.46f)startEncounter(false);else if(x<W()*.74f){screen=6;}else nextChapter();}else if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}}
+            else if(screen==2){if(y>dp(465)&&y<dp(625)){int col=x<W()/2?0:1,row=(int)((y-dp(470))/dp(48)),idx=row*2+col;if(idx==0)attack();else if(idx==1)skill();else if(idx==2)tame();else if(idx==3){defending=true;enemyTurn();}else if(idx==4){playerHp=Math.min(maxHp,playerHp+35);enemyTurn();}else if(idx==5){screen=1;persist();}}}
+            else if(screen==3){if(y>dp(80)&&y<H()-dp(70)){if(x<W()/2)selected=Math.max(0,selected-12);else selected=Math.min(108,selected+12);}else if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}}
+            else if(screen==4||screen==5||screen==7){if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}else if(screen==4&&y>dp(110)&&y<dp(420)){if(y<dp(170)){playerHp=maxHp;persist();beep(true);}else if(y<dp(225)){if(weapon<4&&gold>=40+weapon*40){gold-=40+weapon*40;weapon++;persist();beep(true);}}else if(y<dp(280)){screen=7;}else if(y<dp(335)){screen=6;}}else if(screen==7&&y>dp(290)&&y<dp(375)){if(party.size()>=2&&gold>=40){gold-=40;int id=Math.min(119,Math.max(0,party.get(0)+party.get(1)+rng.nextInt(6)));caught[id]=true;tames++;monsterLevel[id]=Math.min(30,Math.max(2,level+1));if(party.size()<4)party.add(id);persist();beep(true);}else beep(false);}}
+            else if(screen==6){if(y>dp(600)&&y<dp(750)){if(chapter==4&&!married){married=true;spouse="Lyra";year+=2;generation=2;persist();beep(true);}else if(chapter>=6&&!children){children=true;generation=3;year+=4;persist();beep(true);}else nextChapter();}else if(y>dp(750)&&y<dp(850)screen=1;}
+            invalidate();return true;}
     }
 }
