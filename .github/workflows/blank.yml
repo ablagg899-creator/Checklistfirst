@@ -24,6 +24,146 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Add Adventure mode
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path("app/src/main/java/com/example/checklistfirst/MainActivity.java")
+          s=path.read_text()
+
+          old='int questDay,qt,qu,qe,dailyStreak,milestones,event=-1,bossHits,bossNeed; boolean frenzy,boss,pulse; int page;'
+          new='int questDay,qt,qu,qe,dailyStreak,milestones,event=-1,bossHits,bossNeed; boolean frenzy,boss,pulse; int page;\n        int adventureLevel=1,adventureXP=0,adventureEnergy=5,gearPower=0,gearTier=0,adventureRuns=0,fragments=0; long adventureDay=0;'
+          if old not in s: raise SystemExit("adventure fields anchor not found")
+          s=s.replace(old,new,1)
+
+          old='play=save.getLong("play",0);'
+          new='play=save.getLong("play",0); adventureLevel=save.getInt("advLevel",1); adventureXP=save.getInt("advXP",0); adventureEnergy=save.getInt("advEnergy",5); gearPower=save.getInt("gearPower",0); gearTier=save.getInt("gearTier",0); adventureRuns=save.getInt("advRuns",0); fragments=save.getInt("fragments",0); adventureDay=save.getLong("advDay",0);'
+          if old not in s: raise SystemExit("load anchor not found")
+          s=s.replace(old,new,1)
+
+          old='int today=(int)(System.currentTimeMillis()/86400000L); if(today!=questDay){questDay=today;qt=qu=qe=0;}'
+          new='int today=(int)(System.currentTimeMillis()/86400000L); if(today!=questDay){questDay=today;qt=qu=qe=0;} if(adventureDay!=today){adventureDay=today;adventureEnergy=5;}'
+          if old not in s: raise SystemExit("daily anchor not found")
+          s=s.replace(old,new,1)
+
+          old='if(page==0)game(c); else if(page==1)stats(c); else collection(c); save();'
+          new='if(page==0)game(c); else if(page==1)stats(c); else if(page==2)collection(c); else adventure(c); saveAdventure(); save();'
+          if old not in s: raise SystemExit("draw page anchor not found")
+          s=s.replace(old,new,1)
+
+          old='String[] n={"GAME","STATS","COLLECT"};'
+          new='String[] n={"GAME","STATS","COLLECT","ADVENTURE"};'
+          if old not in s: raise SystemExit("nav labels anchor not found")
+          s=s.replace(old,new,1)
+
+          old='W()*(i+.5f)/3'
+          new='W()*(i+.5f)/4'
+          if old not in s: raise SystemExit("nav width anchor not found")
+          s=s.replace(old,new,1)
+
+          anchor='        void stats(Canvas c){'
+          adventure=r'''        void saveAdventure(){
+            save.edit().putInt("advLevel",adventureLevel).putInt("advXP",adventureXP).putInt("advEnergy",adventureEnergy)
+                .putInt("gearPower",gearPower).putInt("gearTier",gearTier).putInt("advRuns",adventureRuns)
+                .putInt("fragments",fragments).putLong("advDay",adventureDay).apply();
+        }
+        int adventureXPNeed(){return 50+adventureLevel*35;}
+        String gearName(){
+            String[] n={"NONE","STARFORGED BLADE","NOVA GAUNTLET","GRAVITY HAMMER","CELESTIAL CROWN","GALAXY RELIC"};
+            return n[Math.min(gearTier,n.length-1)];
+        }
+        void adventureToast(String s){Toast.makeText(getContext(),s,Toast.LENGTH_SHORT).show();tone(ToneGenerator.TONE_PROP_BEEP);buzz();}
+        void awardGear(int bonus){
+            int gain=bonus+adventureLevel*2;
+            gearPower+=gain; tapPower+=gain; gearTier=Math.min(5,Math.max(gearTier,1+gearPower/25));
+            fragments=Math.max(0,fragments-5);
+            adventureXP+=20+adventureLevel*5;
+            adventureToast("EQUIPMENT FOUND! "+gearName()+"  +"+gain+" TAP POWER");
+            floating("GEAR +"+gain,W()/2,H()*.42f);
+        }
+        void adventureExplore(){
+            if(adventureEnergy<=0){adventureToast("No energy! Return tomorrow for 5 more.");return;}
+            adventureEnergy--; adventureRuns++;
+            int roll=rng.nextInt(100);
+            if(roll<22){fragments+=rng.nextInt(4)+2; adventureXP+=18; add(250L*adventureLevel); adventureToast("TREASURE CACHE! +FRAGMENTS +COINS");}
+            else if(roll<42){awardGear(rng.nextInt(5)+3);}
+            else {long reward=(100L+adventureLevel*150L)*(1+rng.nextInt(5));add(reward);adventureXP+=12;fragments++;adventureToast("EXPEDITION SUCCESS! +"+fmt(reward));}
+            if(adventureXP>=adventureXPNeed()){adventureXP-=adventureXPNeed();adventureLevel++;adventureEnergy=Math.min(5,adventureEnergy+1);adventureToast("ADVENTURE LEVEL UP! LEVEL "+adventureLevel);}
+        }
+        void adventureDungeon(){
+            if(adventureEnergy<=0){adventureToast("No energy!");return;}
+            adventureEnergy--; adventureRuns++;
+            int need=15+adventureLevel*8;
+            int hits=0;
+            while(hits<need && rng.nextInt(100)<65) hits++;
+            if(hits>=need-1){awardGear(rng.nextInt(10)+8); fragments+=rng.nextInt(5)+3; add(1000L*adventureLevel);}
+            else {fragments+=2; adventureXP+=25; add(400L*adventureLevel); adventureToast("DUNGEON CLEARED! +FRAGMENTS");}
+            if(adventureXP>=adventureXPNeed()){adventureXP-=adventureXPNeed();adventureLevel++;adventureEnergy=Math.min(5,adventureEnergy+1);adventureToast("ADVENTURE LEVEL UP! LEVEL "+adventureLevel);}
+        }
+        void adventureForge(){
+            int cost=10+gearTier*8;
+            if(fragments<cost){adventureToast("Need "+cost+" fragments to forge.");return;}
+            fragments-=cost; int gain=6+gearTier*4+adventureLevel;
+            gearPower+=gain; tapPower+=gain; gearTier=Math.min(5,Math.max(gearTier,1+gearPower/25));
+            adventureToast("FORGED! +"+gain+" TAP POWER");
+        }
+        void adventure(Canvas c){
+            background(c); header(c);
+            t.setTextAlign(Paint.Align.CENTER); t.setColor(Color.WHITE); t.setTextSize(d(22)); c.drawText("ADVENTURE",W()/2,d(112),t);
+            t.setTextSize(d(9)); t.setColor(Color.rgb(150,175,220)); c.drawText("EXPEDITIONS • DUNGEONS • LEGENDARY LOOT",W()/2,d(130),t);
+
+            p.setColor(Color.rgb(17,23,54)); c.drawRoundRect(d(14),d(145),W()-d(14),d(220),d(14),d(14),p);
+            t.setTextAlign(Paint.Align.LEFT); t.setTextSize(d(9)); t.setColor(Color.rgb(145,160,205));
+            c.drawText("ADVENTURE LEVEL",d(25),d(164),t); c.drawText("ENERGY",W()/2,d(164),t); c.drawText("FRAGMENTS",W()-d(25),d(164),t);
+            t.setTextSize(d(18)); t.setColor(Color.WHITE); c.drawText(""+adventureLevel,d(25),d(190),t); c.drawText(""+adventureEnergy,W()/2,d(190),t); t.setTextAlign(Paint.Align.RIGHT); c.drawText(""+fragments,W()-d(25),d(190),t);
+            t.setTextAlign(Paint.Align.CENTER); t.setTextSize(d(8)); t.setColor(Color.rgb(120,140,185)); c.drawText("XP "+adventureXP+" / "+adventureXPNeed(),W()/2,d(210),t);
+
+            p.setColor(Color.rgb(26,34,73)); c.drawRoundRect(d(14),d(230),W()-d(14),d(302),d(14),d(14),p);
+            t.setTextSize(d(9)); t.setColor(Color.rgb(145,160,205)); c.drawText("EQUIPPED RELIC",W()/2,d(249),t);
+            t.setTextSize(d(16)); t.setColor(Color.rgb(255,210,90)); c.drawText(gearName(),W()/2,d(272),t);
+            t.setTextSize(d(10)); t.setColor(Color.WHITE); c.drawText("+"+gearPower+" TAP POWER",W()/2,d(290),t);
+
+            adventureButton(c,d(14),d(316),W()/2-d(8),d(380),"EXPLORE","Find coins, fragments & gear");
+            adventureButton(c,W()/2+d(8),d(316),W()-d(14),d(380),"DUNGEON","Fight for powerful equipment");
+            adventureButton(c,d(14),d(392),W()-d(14),d(448),"FORGE EQUIPMENT","Spend fragments to upgrade your relic");
+
+            t.setTextSize(d(9)); t.setColor(Color.rgb(145,160,205)); c.drawText("EVERY ADVENTURE CAN CHANGE YOUR MAIN GAME.",W()/2,d(475),t);
+            t.setTextSize(d(8)); t.setColor(Color.rgb(105,125,170)); c.drawText("Equipment permanently increases TAP POWER.",W()/2,d(491),t);
+            nav(c);
+        }
+        void adventureButton(Canvas c,float l,float top,float r,float bottom,String title,String sub){
+            p.setColor(Color.rgb(20,27,61)); c.drawRoundRect(l,top,r,bottom,d(10),d(10),p);
+            t.setTextAlign(Paint.Align.CENTER); t.setTextSize(d(10)); t.setColor(Color.WHITE); c.drawText(title,(l+r)/2,top+d(25),t);
+            t.setTextSize(d(7)); t.setColor(Color.rgb(145,170,210)); c.drawText(sub,(l+r)/2,top+d(43),t);
+        }
+'''
+          if anchor not in s: raise SystemExit("stats anchor not found")
+          s=s.replace(anchor,adventure+anchor,1)
+
+          old='public boolean onTouchEvent(MotionEvent e){'
+          inject=r'''public boolean onTouchEvent(MotionEvent e){
+            if(e.getAction()==MotionEvent.ACTION_UP){
+                float x=e.getX(), y=e.getY(), navY=H()-d(46);
+                if(y>=navY){
+                    int np=(int)(x/(W()/4f)); if(np<0)np=0; if(np>3)np=3; page=np; invalidate(); return true;
+                }
+                if(page==3){
+                    if(y>=d(316)&&y<=d(380)){
+                        if(x<W()/2) adventureExplore(); else adventureDungeon();
+                        invalidate(); return true;
+                    }
+                    if(y>=d(392)&&y<=d(448)){adventureForge();invalidate();return true;}
+                    return true;
+                }
+            }
+'''
+          if old not in s: raise SystemExit("touch anchor not found")
+          s=s.replace(old,inject,1)
+
+          path.write_text(s)
+          PY
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
