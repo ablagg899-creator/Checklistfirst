@@ -8,18 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare pixel-art character sprites
-        working-directory: asterfall-rpg
-        run: |
-          mkdir -p app/src/main/res/drawable-nodpi
-          convert -background none character_sprites.svg -resize 448x96 app/src/main/res/drawable-nodpi/character_sprites.png
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - name: Build debug APK
         working-directory: asterfall-rpg
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
