@@ -1,32 +1,29 @@
-# Tap Galaxy
+# Aaron TAP
 
-A mobile incremental clicker game inspired by classic idle/clicker games.
+A portrait Android incremental tap/clicker game with a long progression curve.
 
-## Gameplay
+## Features
 
-- Tap the glowing Power Core to earn coins.
-- Build a combo by tapping rapidly for bigger payouts.
-- Buy upgrades for stronger taps, passive income, critical taps, and larger combo multipliers.
-- Progress is saved locally on the device.
-- The game is designed for one-handed portrait play.
+- Power Core tapping with combo scaling, critical hits, fever and TAP FRENZY ×10.
+- 9 upgrade categories: Power Glove, Auto Tapper, Crit Core, Combo Engine, Coin Magnet, Star Reactor, Drone Swarm, Quantum Tap and Time Drive.
+- Random 2× Points, Critical Frenzy and Mega Tap events.
+- Random timed boss battles and Golden Bonus collectibles.
+- Achievements, lifetime milestones, daily rewards, daily quests and rebirth/prestige.
+- Offline passive earnings and local save data.
+- Large-number formatting: K, M, B, T, Qa, Qi and scientific notation.
+- Juicy neon visuals, floating rewards, sound effects and vibration feedback.
+- Three phone-sized sections: GAME, STATS and COLLECT.
 
-## Upgrades
+## APK build
 
-- **Power Glove** — increases coins per tap.
-- **Auto Bot** — generates coins every second.
-- **Crit Core** — adds a chance for a 3x critical tap.
-- **Combo Engine** — raises the maximum combo multiplier.
+GitHub Actions builds a debug APK and release APK on every push to `main`. Open the workflow run and download the `aaron-tap-apks` artifact.
 
-## APK
+## Local build
 
-Every push to `main` builds a debug APK and an unsigned release APK through GitHub Actions. The artifacts are named `checklist-first-debug-apk` and `checklist-first-release-apk`.
-
-## Build locally
-
-Use Java 17 and Android SDK 36, then run:
+Use Java 17, Android SDK 36 and Gradle 8.13:
 
 ```bash
 gradle assembleDebug
 ```
 
-The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+APK: `app/build/outputs/apk/debug/app-debug.apk`.
