@@ -1,0 +1,30 @@
+name: Build Asterfall Adventure APK
+on:
+  push:
+    branches: [asterfall-adventure]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+      - name: SDK packages
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Gradle build
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.7'
+          arguments: -p asterfall-adventure assembleDebug assembleRelease
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: asterfall-adventure-apks
+          path: asterfall-adventure/app/build/outputs/apk/**/*.apk
