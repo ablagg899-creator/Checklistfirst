@@ -1,22 +1,25 @@
-# Checklist First
+# Tap Galaxy
 
-A simple Android checklist app.
+A mobile incremental clicker game inspired by classic idle/clicker games.
 
-## Features
+## Gameplay
 
-- Create multiple lists
-- Add checklist items
-- Check items off
-- Progress count for each list
-- Long-press an item to delete it
-- Delete lists
-- Data is stored locally on the device
+- Tap the glowing Power Core to earn coins.
+- Build a combo by tapping rapidly for bigger payouts.
+- Buy upgrades for stronger taps, passive income, critical taps, and larger combo multipliers.
+- Progress is saved locally on the device.
+- The game is designed for one-handed portrait play.
+
+## Upgrades
+
+- **Power Glove** — increases coins per tap.
+- **Auto Bot** — generates coins every second.
+- **Crit Core** — adds a chance for a 3x critical tap.
+- **Combo Engine** — raises the maximum combo multiplier.
 
 ## APK
 
-Every push to `main` runs the GitHub Actions workflow in `.github/workflows/build-apk.yml` and publishes the debug APK as the `checklist-first-debug-apk` workflow artifact. The debug APK is installable on an Android device for testing.
-
-The project uses Android Gradle Plugin 9.4.0 and Gradle 9.6.0. Android's current documentation lists AGP 9.4.0 as stable and Gradle 9.6.0 as its required/default Gradle version. 
+Every push to `main` builds a debug APK and an unsigned release APK through GitHub Actions. The artifacts are named `checklist-first-debug-apk` and `checklist-first-release-apk`.
 
 ## Build locally
 
@@ -26,4 +29,4 @@ Use Java 17 and Android SDK 36, then run:
 gradle assembleDebug
 ```
 
-The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
