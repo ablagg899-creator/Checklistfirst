@@ -1,4 +1,4 @@
-name: Build Aaron TAP APK
+name: Build Monster Tamer APK
 on:
   push:
     branches: [ main ]
@@ -18,5 +18,5 @@ jobs:
       - run: gradle assembleDebug assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: aaron-tap-apks
+          name: monster-tamer-apks
           path: app/build/outputs/apk/**/*.apk

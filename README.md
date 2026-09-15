@@ -1,29 +1,27 @@
-# Aaron TAP
+# Monster Tamer: A New Journey
 
-A portrait Android incremental tap/clicker game with a long progression curve.
+An original Android turn-based monster-taming RPG with a classic 16/32-bit JRPG presentation. It is inspired by the *feel* of classic console RPGs, while using original names, systems, characters, creatures, and artwork rather than copying Dragon Quest assets.
 
-## Features
+## Included gameplay
 
-- Power Core tapping with combo scaling, critical hits, fever and TAP FRENZY ×10.
-- 9 upgrade categories: Power Glove, Auto Tapper, Crit Core, Combo Engine, Coin Magnet, Star Reactor, Drone Swarm, Quantum Tap and Time Drive.
-- Random 2× Points, Critical Frenzy and Mega Tap events.
-- Random timed boss battles and Golden Bonus collectibles.
-- Achievements, lifetime milestones, daily rewards, daily quests and rebirth/prestige.
-- Offline passive earnings and local save data.
-- Large-number formatting: K, M, B, T, Qa, Qi and scientific notation.
-- Juicy neon visuals, floating rewards, sound effects and vibration feedback.
-- Three phone-sized sections: GAME, STATS and COLLECT.
+- Explore Greenvale and six themed regions.
+- Turn-based battles with Attack, Tame, Guard, and Run.
+- **120 distinct monster species** available to discover and tame.
+- Taming odds improve when a monster is weakened.
+- Tamed monsters join the roster and the first four become the active party.
+- Party monsters level up after victories.
+- Hero leveling, XP, HP, gold, healing, saving, and recovery.
+- Monster Book with 7 pages of collectible species.
+- Town/world, battle, monster collection, and camp screens.
+- Original pixel-inspired visuals drawn for the app plus AI-generated promotional concept art.
+- Offline/local save data through Android SharedPreferences.
 
-## APK build
+## Build
 
-GitHub Actions builds a debug APK and release APK on every push to `main`. Open the workflow run and download the `aaron-tap-apks` artifact.
+GitHub Actions builds both debug and release APKs on every push to `main`. Open the Actions run and download the `monster-tamer-apks` artifact.
 
-## Local build
-
-Use Java 17, Android SDK 36 and Gradle 8.13:
+Local build requirements: Java 17, Android SDK 36, and Gradle 8.13.
 
 ```bash
-gradle assembleDebug
+gradle assembleDebug assembleRelease
 ```
-
-APK: `app/build/outputs/apk/debug/app-debug.apk`.
