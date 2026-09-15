@@ -1,0 +1,3 @@
+package com.example.checklistfirst;
+import android.app.*;import android.os.*;import android.graphics.*;import android.view.*;
+public class MainActivity extends Activity{public void onCreate(Bundle b){super.onCreate(b);setTitle("Aaron TAP");setContentView(new V());}class V extends View{Paint p=new Paint(1);V(){super(MainActivity.this);}protected void onDraw(Canvas c){c.drawColor(Color.rgb(5,8,25));p.setColor(Color.CYAN);p.setTextSize(52);c.drawText("AARON TAP",40,120,p);p.setTextSize(28);c.drawText("TAP THE POWER CORE",45,300,p);p.setColor(Color.BLUE);c.drawCircle(getWidth()/2,500,120,p);}public boolean onTouchEvent(android.view.MotionEvent e){return true;}}}
