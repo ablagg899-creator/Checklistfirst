@@ -10,4 +10,6 @@ A touch-first 2D Android JRPG prototype built around the uploaded sprite sheets 
 ## Story
 The bells beneath Asterfall's river have begun ringing by themselves. Lira discovers a journal left by a vanished parent and learns that three Star Shards once protected the valley from the Hollow King. Travel from Asterfall Village through Whispering Green to the Ruined Watchtower, meeting Kai, Bran, Elyse and the wardens who guard the old secrets.
 
+The character rendering now uses a dedicated pixel-art sprite atlas instead of geometric placeholder drawings.
+
 The prototype deliberately avoids Pokémon-style collecting and battles. It focuses on exploration, dialogue, party storytelling and a chapter-based adventure structure.
