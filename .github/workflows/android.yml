@@ -1,4 +1,4 @@
-name: Build Pixel Mine Tycoon APK
+name: Build DinoBot Factory APK
 
 on:
   push:
@@ -20,29 +20,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Reconstruct HTML and apply Android layout patch
+        run: python3 app/src/main/assets/build_dinobot.py
       - name: Build debug and release APKs
         run: gradle :app:assembleDebug :app:assembleRelease --stacktrace --no-daemon
-      - name: Publish debug APK
+      - name: Publish downloadable APK
         run: |
           mkdir -p downloads
-          cp app/build/outputs/apk/debug/app-debug.apk downloads/PixelMineTycoon.apk
-          ls -lh downloads/PixelMineTycoon.apk
+          cp app/build/outputs/apk/debug/app-debug.apk downloads/DinoBotFactory-Android.apk
+          ls -lh downloads/DinoBotFactory-Android.apk
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: pixel-mine-tycoon-apks
+          name: dinobot-factory-android-apks
           path: |
-            downloads/PixelMineTycoon.apk
+            downloads/DinoBotFactory-Android.apk
             app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 30
       - name: Commit downloadable APK
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add downloads/PixelMineTycoon.apk
+          git add downloads/DinoBotFactory-Android.apk app/src/main/assets/index.html
           if git diff --cached --quiet; then
-            echo 'APK unchanged; nothing to commit.'
+            echo 'No generated changes to commit.'
           else
-            git commit -m 'Publish latest Pixel Mine Tycoon APK'
+            git commit -m 'Publish Android APK with responsive layout'
             git push
           fi
