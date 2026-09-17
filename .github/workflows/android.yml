@@ -1,4 +1,4 @@
-name: Build Monster Tamer APK
+name: Build Pixel Mine Tycoon APK
 on:
   push:
     branches: [ main ]
@@ -15,8 +15,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - run: gradle assembleDebug assembleRelease --stacktrace
-      - uses: actions/upload-artifact@v4
+      - name: Build debug and release APKs
+        run: gradle assembleDebug assembleRelease --stacktrace
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
         with:
-          name: monster-tamer-apks
-          path: app/build/outputs/apk/**/*.apk
+          name: pixel-mine-tycoon-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release-unsigned.apk
