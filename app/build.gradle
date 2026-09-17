@@ -1,14 +1,19 @@
 plugins { id 'com.android.application' }
 
 android {
-    namespace 'com.aarontap.rpg'
+    namespace 'com.aarontap.mining'
     compileSdk 36
     defaultConfig {
-        applicationId 'com.aarontap.rpg'
+        applicationId 'com.aarontap.mining'
         minSdk 24
         targetSdk 36
-        versionCode 1
+        versionCode 2
         versionName '1.0'
     }
-    buildTypes { release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
