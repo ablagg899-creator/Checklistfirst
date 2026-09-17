@@ -1,58 +1,264 @@
-package com.aarontap.rpg;
+package com.example.checklistfirst;
 
 import android.app.Activity;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.*;
-import android.media.AudioManager;
-import android.media.ToneGenerator;
-import android.os.Bundle;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class MainActivity extends Activity {
- @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(Color.rgb(6,12,22));getWindow().setNavigationBarColor(Color.rgb(6,12,22));setTitle("Monster Tamer: Generations");setContentView(new Game(this));}
- static class Game extends View {
-  final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG), text=new Paint(Paint.ANTI_ALIAS_FLAG); final Random rng=new Random(); final SharedPreferences save; final Vibrator vibrator; final ToneGenerator tone; final float den;
-  int screen=0,chapter=1,generation=1,year=8,zone=0,level=1,xp=0,gold=120,wins=0,tames=0,enemy=0,enemyHp=0,playerHp=120,maxHp=120,selected=0,battleTurn=0,anim=0,weapon=0,flash=0;
-  boolean boss=false,defending=false,married=false,children=false; String spouse=""; final ArrayList<Integer> party=new ArrayList<>(); final boolean[] caught=new boolean[120]; final int[] monsterLevel=new int[120];
-  Bitmap heroWalk,worldMap; final Bitmap[] monsterArt=new Bitmap[12];
-  final String[] monsterNames={"Azure Slime","Metal Slime","King Slime","Drake","Wyvern","Golem","Wolf","Tiger","Ogre","Demon","Phoenix","Unicorn","Green Slime","Red Slime","Blue Slime","Purple Slime","Gooey Slime","Liquid Slime","Muddy Slime","Slime Mage","Sparkle Slime","Giant Slime","Crystal Slime","Wild Boar","Great Boar","Bear","Ice Bear","Snow Tiger","Leopard","Sabertooth","Boar King","Lion","Panther","Hyena","Baby Dragon","Green Dragon","Red Dragon","Blue Dragon","Black Dragon","Ice Dragon","Golden Dragon","Ancient Dragon","Skeleton","Skeleton Archer","Zombie","Ghoul","Wight","Lich","Mummy","Ghost","Phantom","Bone Dragon","Dark Knight","Mandrake","Cactuar","Shroom","Mushroom King","Flower","Sunflower","Vine","Treant","Ent","Will-o-Wisp","Pumpkin","Carnivine","Blooming Flower","Roc Golem","Creeper","Fire Slime","Ice Slime","Wind Sprite","Earth Golem","Water Elemental","Lightning Sprite","Sand Golem","Lava Golem","Storm Elemental","Crystal Elemental","Fish","Shark","Giant Fish","Angler","Jellyfish","Octopus","Squid","Kraken","Sea Serpent","Mermaid","Water Dragon","Griffin","Pegasus","Unicorn Queen","Chimera","Basilisk","Hydra","Cerberus","Minotaur","Colossus","Jormungandr","Fenrir","Troll","Ogre King","Cyclops","Titan","Demon Lord","Archdemon","Nightmare","Behemoth","The Ancient One","Phoenix","Solar Phoenix","Star Phoenix","Goblin","Goblin King","Orc King","Slime Lord","Shadow Fenrir","World Serpent"};
-  final String[] zones={"Greenvale","Whisperwood","Sunscar","Moonlit Coast","Frostpeak","Elder Ruins","Skyreach","Shadow Vale"}; final String[] towns={"Greenvale Village","Willowbrook","Dustmere","Coralport","Frostholm","Ruinhaven","Skyspire","Nightfall"};
-  final String[] chapters={"The First Bond","Whispers in the Woods","The Sunken Crown","Storm over Moonlit Coast","Heart of Frostpeak","The Elder Gate","Road to Skyreach","The World Serpent"};
-  final String[] chapterText={"As a child, you discover a strange truth: a defeated monster may choose friendship instead of fleeing.","The old forest is waking. You meet rangers, merchants and a breeder who teaches you how to read a monster's heart.","A stolen crown lies beneath the coast. Your first voyage reveals that the kingdom's history is tied to the monster clans.","Years pass. You become an adult, build a home, and sail toward a storm that changes your family forever.","The mountains reveal a prophecy: when the Elder Gate opens, a family bond will be stronger than any single hero.","The Gate awakens. Your children inherit the journey and can fight beside the companions you raised.","Ships, sky roads and ancient ruins open new regions. Rare monsters begin appearing as your party grows.","Thirty years after the first bond, the World Serpent rises. Your family and monsters must decide the fate of the realm."};
-  final String[] npcs={"Mira the Innkeeper","Tobin the Smith","Elder Rowan","Lyra the Ranger","Bram the Breeder","Sage Orin","Captain Vale","The Wandering Merchant"}; final String[] weapons={"Wooden Blade","Iron Sword","Knight Saber","Moonsteel","Dragonfang"}; final int[] weaponPower={0,8,18,30,48};
-  Game(Context c){super(c);den=getResources().getDisplayMetrics().density;save=c.getSharedPreferences("monster_tamer_generations",Context.MODE_PRIVATE);vibrator=(Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);tone=new ToneGenerator(AudioManager.STREAM_MUSIC,70);text.setTypeface(Typeface.create(Typeface.SERIF,Typeface.BOLD));setFocusable(true);load();loadArt();postInvalidateDelayed(120);}
-  float dp(float v){return v*den;} float W(){return getWidth();} float H(){return getHeight();} Bitmap asset(String n){try{return BitmapFactory.decodeStream(getContext().getAssets().open(n));}catch(Exception e){return null;}}
-  void loadArt(){heroWalk=asset("hero_walk.png");worldMap=asset("world_map.png");String[] f={"slime.png","metal.png","king_slime.png","dragon.png","wyvern.png","golem.png","wolf.png","tiger.png","ogre.png","demon.png","phoenix.png","unicorn.png"};for(int i=0;i<f.length;i++)monsterArt[i]=asset(f[i]);}
-  void load(){level=save.getInt("level",1);xp=save.getInt("xp",0);gold=save.getInt("gold",120);wins=save.getInt("wins",0);tames=save.getInt("tames",0);chapter=save.getInt("chapter",1);generation=save.getInt("generation",1);year=save.getInt("year",8);zone=save.getInt("zone",0);playerHp=save.getInt("hp",120);married=save.getBoolean("married",false);children=save.getBoolean("children",false);spouse=save.getString("spouse","");weapon=save.getInt("weapon",0);for(int i=0;i<120;i++){caught[i]=save.getBoolean("c"+i,false);monsterLevel[i]=save.getInt("m"+i,1);if(caught[i]&&party.size()<4)party.add(i);}maxHp=100+level*24;if(party.isEmpty()){caught[0]=true;party.add(0);tames=Math.max(1,tames);}if(playerHp<=0||playerHp>maxHp)playerHp=maxHp;}
-  void persist(){SharedPreferences.Editor e=save.edit().putInt("level",level).putInt("xp",xp).putInt("gold",gold).putInt("wins",wins).putInt("tames",tames).putInt("chapter",chapter).putInt("generation",generation).putInt("year",year).putInt("zone",zone).putInt("hp",playerHp).putBoolean("married",married).putBoolean("children",children).putString("spouse",spouse).putInt("weapon",weapon);for(int i=0;i<120;i++)if(caught[i])e.putBoolean("c"+i,true).putInt("m"+i,monsterLevel[i]);e.apply();}
-  void beep(boolean good){try{tone.startTone(good?ToneGenerator.TONE_PROP_ACK:ToneGenerator.TONE_PROP_NACK,90);}catch(Exception ignored){}try{if(vibrator!=null)vibrator.vibrate(VibrationEffect.createOneShot(24,45));}catch(Exception ignored){}}
-  void box(Canvas c,float l,float y,float r,float b,int col){p.setStyle(Paint.Style.FILL);p.setColor(col);c.drawRoundRect(l,y,r,b,dp(10),dp(10),p);}void outline(Canvas c,float l,float y,float r,float b,int col){p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(2));p.setColor(col);c.drawRoundRect(l,y,r,b,dp(10),dp(10),p);p.setStyle(Paint.Style.FILL);}void label(Canvas c,String s,float x,float y,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,text);}void left(Canvas c,String s,float x,float y,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.LEFT);c.drawText(s,x,y,text);}void button(Canvas c,float l,float y,float r,float b,String s,int col){box(c,l,y,r,b,col);outline(c,l,y,r,b,0xFF5C8BB8);label(c,s,(l+r)/2,y+(b-y)*.67f,13,Color.WHITE);}void bmp(Canvas c,Bitmap bm,float cx,float cy,float w,float h){if(bm==null)return;p.setFilterBitmap(false);c.drawBitmap(bm,null,new RectF(cx-w/2,cy-h/2,cx+w/2,cy+h/2),p);}
-  @Override protected void onDraw(Canvas c){c.drawColor(0xFF071321);if(screen==0)title(c);else if(screen==1)world(c);else if(screen==2)battle(c);else if(screen==3)book(c);else if(screen==4)town(c);else if(screen==5)party(c);else if(screen==6)story(c);else breed(c);anim++;if(flash>0)flash--;postInvalidateDelayed(120);}
-  void title(Canvas c){if(worldMap!=null)bmp(c,worldMap,W()/2,H()*.32f,W()*.94f,H()*.50f);p.setColor(0xAA071321);c.drawRect(0,0,W(),H(),p);label(c,"MONSTER TAMER",W()/2,dp(100),30,Color.WHITE);label(c,"GENERATIONS",W()/2,dp(132),18,0xFFFFD45A);label(c,"A family • a world • 120 monster bonds",W()/2,dp(168),12,0xFFD5E5F5);if(heroWalk!=null)bmp(c,heroWalk,W()/2+(float)Math.sin(anim*.08)*dp(5),H()*.33f,dp(95),dp(120));if(monsterArt[0]!=null)bmp(c,monsterArt[0],W()*.76f,H()*.35f,dp(85),dp(85));if(monsterArt[3]!=null)bmp(c,monsterArt[3],W()*.24f,H()*.35f,dp(100),dp(90));button(c,W()*.12f,H()*.57f,W()*.88f,H()*.65f,"CONTINUE ADVENTURE",0xFF1C4D70);button(c,W()*.12f,H()*.68f,W()*.88f,H()*.76f,"NEW JOURNEY",0xFF634027);label(c,"Childhood  →  Marriage  →  Children  →  Final Battle",W()/2,H()*.84f,11,Color.WHITE);label(c,"Tap to begin",W()/2,H()*.91f,10,0xFF9BB7D1);}
-  void header(Canvas c,String s){p.setColor(0xFF12263C);c.drawRect(0,0,W(),dp(64),p);label(c,s,W()/2,dp(39),19,Color.WHITE);}void nav(Canvas c){float y=H()-dp(65);p.setColor(0xFF102238);c.drawRect(0,y,W(),H(),p);String[] n={"MAP","BOOK","TOWN","PARTY","BREED"};for(int i=0;i<5;i++)label(c,n[i],W()*(.10f+i*.20f),H()-dp(27),11,Color.WHITE);}
-  void world(Canvas c){header(c,"WORLD • "+zones[zone]);if(worldMap!=null)bmp(c,worldMap,W()/2,H()*.33f,W()*.92f,H()*.44f);box(c,W()*.05f,H()*.52f,W()*.95f,H()*.70f,0xE8172B40);label(c,chapters[chapter-1],W()/2,H()*.57f,18,0xFFFFD45A);label(c,towns[zone],W()/2,H()*.615f,14,Color.WHITE);label(c,"Year "+year+" • Generation "+generation+" • Chapter "+chapter+"/8",W()/2,H()*.655f,11,0xFFD4E3F2);button(c,W()*.08f,H()*.73f,W()*.43f,H()*.81f,"EXPLORE",0xFF24536C);button(c,W()*.48f,H()*.73f,W()*.71f,H()*.81f,"STORY",0xFF63432D);button(c,W()*.76f,H()*.73f,W()*.92f,H()*.81f,"NEXT",0xFF3B5E45);nav(c);}
-  void battle(Canvas c){header(c,boss?"FINAL BATTLE • WORLD SERPENT":"WILD ENCOUNTER");p.setColor(0xFF142F31);c.drawRect(0,dp(64),W(),H(),p);p.setColor(0xFF234E51);c.drawCircle(W()*.72f,dp(145),dp(68),p);p.setColor(0xFF1A383A);c.drawOval(W()*.35f,H()*.43f,W()*.98f,H()*.68f,p);Bitmap enemyBm=monsterFor(enemy);float bob=(float)Math.sin(anim*.12)*dp(4);if(enemyBm!=null)bmp(c,enemyBm,W()*.72f,dp(185)+bob,boss?dp(135):dp(92),boss?dp(125):dp(90));label(c,boss?"World Serpent":monsterDisplayName(enemy),W()*.72f,dp(250),15,Color.WHITE);bar(c,W()*.48f,dp(264),W()*.94f,dp(281),enemyHp,enemyMax(),0xFFD04D5B);if(heroWalk!=null)bmp(c,heroWalk,W()*.23f,dp(345),dp(88),dp(110));label(c,"Hero  Lv."+level,W()*.23f,dp(408),14,Color.WHITE);label(c,"HP "+playerHp+" / "+maxHp,W()*.23f,dp(431),11,0xFFFFD45A);label(c,"Bonded "+party.size()+"/4",W()*.23f,dp(452),10,0xFFBDEBC9);String[] a={"ATTACK","SKILL","TAME","GUARD","ITEM","RUN"};for(int i=0;i<6;i++){float l=i%2==0?W()*.06f:W()*.53f,y=dp(470)+(i/2)*dp(48);button(c,l,y,l+W()*.41f,y+dp(38),a[i],i==2?0xFF70472E:0xFF244B68);}if(flash>0){p.setColor(0x55FFFFFF);c.drawRect(0,0,W(),H(),p);}label(c,boss?"The final boss cannot be tamed.":"Weaken it before TAME for better odds.",W()/2,H()-dp(88),10,0xFFD5E5F5);}
-  void bar(Canvas c,float l,float y,float r,float b,int value,int max,int col){box(c,l,y,r,b,0xFF0A1724);float q=Math.max(0,Math.min(1,value/(float)Math.max(1,max)));p.setColor(col);c.drawRoundRect(l+dp(2),y+dp(2),l+dp(2)+(r-l-dp(4))*q,b-dp(2),dp(6),dp(6),p);}
-  int enemyMax(){return 70+chapter*22+(boss?160:enemy%5*10);}String monsterDisplayName(int id){return id<monsterNames.length?monsterNames[id]:"Unknown Monster";}Bitmap monsterFor(int id){if(id<0)return null;return monsterArt[id%monsterArt.length];}
-  void book(Canvas c){header(c,"MONSTER BOOK • "+tames+" / 120");int page=selected/12,start=page*12;for(int i=0;i<12;i++){int id=start+i;if(id>=120)break;float x=W()*(.17f+(i%3)*.33f),y=dp(105)+(i/3)*dp(78);Bitmap bm=monsterFor(id);if(caught[id]&&bm!=null)bmp(c,bm,x,y,dp(52),dp(52));else{p.setColor(0xFF243446);c.drawCircle(x,y,dp(24),p);label(c,"?",x,y+dp(8),20,0xFF73869B);}label(c,caught[id]?monsterDisplayName(id):"???",x,y+dp(31),9,caught[id]?Color.WHITE:0xFF718196);}label(c,"Page "+(page+1)+" / 10 • Tap left/right to browse",W()/2,H()-dp(83),11,0xFFFFD45A);nav(c);}
-  void town(Canvas c){header(c,towns[zone]);label(c,"FAMILY TOWN",W()/2,dp(92),17,0xFFFFD45A);String[] jobs={"INN • heal party","SMITH • upgrade weapon","BREEDER • raise bonds","QUEST • advance story","SHOP • buy supplies"};for(int i=0;i<5;i++){float y=dp(112)+i*dp(54);box(c,W()*.06f,y,W()*.94f,y+dp(44),0xFF1A3045);left(c,npcs[(zone+i)%npcs.length],W()*.10f,y+dp(19),12,Color.WHITE);left(c,jobs[i],W()*.10f,y+dp(36),9,0xFF9DB6CE);}box(c,W()*.06f,H()*.54f,W()*.94f,H()*.69f,0xE8172B40);label(c,married?"Married to "+spouse:"Not married yet",W()/2,H()*.59f,14,0xFFFFD45A);label(c,children?"Your children are ready to join the quest.":"The next generation awaits.",W()/2,H()*.635f,10,Color.WHITE);nav(c);}
-  void party(Canvas c){header(c,"PARTY • FAMILY & MONSTERS");label(c,"Hero  Lv."+level+"   HP "+playerHp+"/"+maxHp+"   Gold "+gold,W()/2,dp(91),12,Color.WHITE);if(heroWalk!=null)bmp(c,heroWalk,W()*.18f,dp(142),dp(60),dp(75));label(c,married?"Spouse • "+spouse:"Childhood Hero",W()*.18f,dp(190),10,0xFFFFD45A);for(int i=0;i<4;i++){float y=dp(225)+i*dp(76);box(c,W()*.07f,y,W()*.93f,y+dp(62),0xFF182D42);if(i<party.size()){int id=party.get(i);Bitmap bm=monsterFor(id);if(bm!=null)bmp(c,bm,W()*.20f,y+dp(30),dp(48),dp(48));left(c,monsterDisplayName(id),W()*.32f,y+dp(25),13,Color.WHITE);left(c,"Lv."+monsterLevel[id]+" • Bond "+(monsterLevel[id]*12)+"%",W()*.32f,y+dp(46),10,0xFF9FC1DA);}else left(c,"Empty slot",W()*.32f,y+dp(35),12,0xFF687B8F);}nav(c);}
-  void story(Canvas c){header(c,"CHAPTER "+chapter+" • "+chapters[chapter-1]);label(c,"YEAR "+year+"   •   GENERATION "+generation,W()/2,dp(90),11,0xFFFFD45A);box(c,W()*.07f,dp(110),W()*.93f,H()*.58f,0xFF13263A);label(c,chapters[chapter-1],W()/2,dp(145),19,Color.WHITE);wrap(c,chapterText[chapter-1],W()*.13f,dp(190),W()*.87f,22,13,0xFFD6E5F2);if(chapter==4&&!married)button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"MARRY LYRA • BEGIN A FAMILY",0xFF70404E);else if(chapter>=6&&!children)button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"RAISE THE NEXT GENERATION",0xFF4E6640);else button(c,W()*.12f,H()*.64f,W()*.88f,H()*.72f,"ADVANCE CHAPTER",0xFF24536C);button(c,W()*.12f,H()*.76f,W()*.88f,H()*.84f,"RETURN TO MAP",0xFF263E55);}
-  void wrap(Canvas c,String s,float l,float y,float r,float lh,float z,int col){text.setTextSize(dp(z));text.setColor(col);text.setTextAlign(Paint.Align.LEFT);String[] words=s.split(" ");String line="";for(String w:words){String test=line.length()==0?w:line+" "+w;if(text.measureText(test)>r-l){c.drawText(line,l,y,text);y+=dp(lh);line=w;}else line=test;}if(line.length()>0)c.drawText(line,l,y,text);}
-  void breed(Canvas c){header(c,"BREEDING • THE FAMILY BOND");label(c,"Combine two bonded monsters to raise a stronger heir.",W()/2,dp(94),11,0xFFD6E5F2);box(c,W()*.08f,dp(120),W()*.92f,dp(270),0xFF172B40);int a=party.size()>0?party.get(0):0,b=party.size()>1?party.get(1):0;if(monsterFor(a)!=null)bmp(c,monsterFor(a),W()*.28f,dp(190),dp(75),dp(75));if(monsterFor(b)!=null)bmp(c,monsterFor(b),W()*.72f,dp(190),dp(75),dp(75));label(c,monsterDisplayName(a),W()*.28f,dp(242),11,Color.WHITE);label(c,monsterDisplayName(b),W()*.72f,dp(242),11,Color.WHITE);label(c,"✦",W()/2,dp(198),28,0xFFFFD45A);button(c,W()*.18f,dp(300),W()*.82f,dp(360),"BREED • 40 GOLD",0xFF5C4930);box(c,W()*.08f,dp(390),W()*.92f,dp(500),0xFF13263A);wrap(c,"Breeding creates a new bonded monster, increases its starting level, and can unlock rare evolution paths.",W()*.12f,dp(425),W()*.88f,21,12,Color.WHITE);nav(c);}
-  void startEncounter(boolean finalBoss){boss=finalBoss;enemy=finalBoss?11:rng.nextInt(18);enemyHp=enemyMax();battleTurn=0;defending=false;screen=2;beep(true);invalidate();}
-  void winBattle(){wins++;gold+=18+chapter*8;xp+=28+chapter*14;while(xp>=level*80){xp-=level*80;level++;maxHp=100+level*24;playerHp=maxHp;}for(int id:party)monsterLevel[id]=Math.min(30,monsterLevel[id]+1);if(chapter<8&&wins%3==0)chapter=Math.min(8,chapter+1);playerHp=Math.min(maxHp,playerHp+20);persist();}
-  void attack(){int dmg=18+level*3+weaponPower[weapon]+rng.nextInt(10);enemyHp-=dmg;battleTurn++;beep(true);if(enemyHp<=0){winBattle();screen=1;return;}enemyTurn();}
-  void skill(){int dmg=28+level*4+weapon*5+rng.nextInt(16);enemyHp-=dmg;battleTurn++;flash=8;beep(true);if(enemyHp<=0){winBattle();screen=1;return;}enemyTurn();}
-  void enemyTurn(){int dmg=8+chapter*3+rng.nextInt(12);if(defending)dmg/=2;playerHp-=dmg;defending=false;if(playerHp<=0){playerHp=maxHp/2;gold=Math.max(0,gold-25);persist();screen=1;}}
-  void tame(){if(boss){beep(false);return;}int chance=25+(enemyMax()-enemyHp)*55/enemyMax()+Math.min(15,chapter*2);if(rng.nextInt(100)<chance){int id=enemy%120;if(!caught[id]){caught[id]=true;tames++;if(party.size()<4)party.add(id);}monsterLevel[id]=Math.max(1,level);gold+=8;persist();beep(true);screen=1;}else{beep(false);enemyTurn();}}
-  void nextChapter(){if(chapter<8){chapter++;year+=3;zone=Math.min(7,chapter-1);}persist();screen=1;beep(true);}
-  @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;float x=e.getX(),y=e.getY();if(screen==0){screen=1;invalidate();return true;}if(screen==1){if(y>H()*.71f&&y<H()*.84f){if(x<W()*.46f)startEncounter(false);else if(x<W()*.74f)screen=6;else nextChapter();}else if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}}else if(screen==2){if(y>dp(465)&&y<dp(625)){int col=x<W()/2?0:1,row=(int)((y-dp(470))/dp(48)),idx=row*2+col;if(idx==0)attack();else if(idx==1)skill();else if(idx==2)tame();else if(idx==3){defending=true;enemyTurn();}else if(idx==4){playerHp=Math.min(maxHp,playerHp+35);enemyTurn();}else if(idx==5){screen=1;persist();}}}else if(screen==3){if(y>dp(80)&&y<H()-dp(70)){if(x<W()/2)selected=Math.max(0,selected-12);else selected=Math.min(108,selected+12);}else if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}}else if(screen==4||screen==5||screen==7){if(y>H()-dp(70)){if(x<W()*.2f)screen=1;else if(x<W()*.4f)screen=3;else if(x<W()*.6f)screen=4;else if(x<W()*.8f)screen=5;else screen=7;}else if(screen==4&&y>dp(110)&&y<dp(420)){if(y<dp(170)){playerHp=maxHp;persist();beep(true);}else if(y<dp(225)){if(weapon<4&&gold>=40+weapon*40){gold-=40+weapon*40;weapon++;persist();beep(true);}}else if(y<dp(280))screen=7;else if(y<dp(335))screen=6;}else if(screen==7&&y>dp(290)&&y<dp(375)){if(party.size()>=2&&gold>=40){gold-=40;int id=Math.min(119,Math.max(0,party.get(0)+party.get(1)+rng.nextInt(6)));caught[id]=true;tames++;monsterLevel[id]=Math.min(30,Math.max(2,level+1));if(party.size()<4)party.add(id);persist();beep(true);}else beep(false);}}else if(screen==6){if(y>dp(600)&&y<dp(750)){if(chapter==4&&!married){married=true;spouse="Lyra";year+=2;generation=2;persist();beep(true);}else if(chapter>=6&&!children){children=true;generation=3;year+=4;persist();beep(true);}else nextChapter();}else if(y>dp(750)&&y<dp(850)){screen=1;}}invalidate();return true;}
- }
+    MineView game;
+
+    @Override public void onCreate(Bundle b) {
+        super.onCreate(b);
+        getWindow().setFlags(1024, 1024);
+        game = new MineView(this);
+        setContentView(game);
+    }
+
+    @Override protected void onPause() { super.onPause(); if (game != null) game.save(); }
+    @Override protected void onResume() { super.onResume(); if (game != null) game.applyOffline(); }
+
+    static class OreDrop {
+        float x, y, vx, vy, size;
+        int type;
+        boolean alive = true;
+        OreDrop(float x, float y, int type, float size) {
+            this.x=x; this.y=y; this.type=type; this.size=size;
+            vx=(float)(Math.random()*2.4-1.2); vy=-(float)(Math.random()*3+2);
+        }
+    }
+
+    static class Spark { float x,y,vx,vy,life; int color; Spark(float x,float y,int c){this.x=x;this.y=y;color=c;life=1f;vx=(float)(Math.random()*5-2.5);vy=(float)(Math.random()*5-3.5);} }
+
+    static class MineView extends View {
+        Paint p = new Paint();
+        Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Handler handler = new Handler(Looper.getMainLooper());
+        Random rng = new Random(71);
+        SharedPreferences prefs;
+        List<OreDrop> drops = new ArrayList<>();
+        List<Spark> sparks = new ArrayList<>();
+        long lastFrame = System.currentTimeMillis();
+        long lastSave = 0;
+        long lastTap = 0;
+        long coins = 0;
+        long totalTaps = 0;
+        long lifetimeCoins = 0;
+        int depth = 1;
+        int miningPower = 1;
+        int beamWidth = 1;
+        int miningSpeed = 1;
+        int backpack = 30;
+        int oreCount = 0;
+        int combo = 0;
+        int bestCombo = 0;
+        int oreCopper=0, oreIron=0, oreGold=0, oreCrystal=0;
+        float beamX=0, beamY=0, beamAlpha=0;
+        float minerBob=0;
+        float drillPulse=0;
+        float scroll=0;
+        long passiveCarry=0;
+        long lastTime;
+        boolean shop=false;
+        boolean bag=false;
+        int w,h;
+
+        int bg = Color.rgb(5,9,18), panel=Color.rgb(12,20,34), panel2=Color.rgb(18,29,48);
+        int cyan=Color.rgb(69,210,255), blue=Color.rgb(48,126,230), gold=Color.rgb(255,193,57), white=Color.rgb(235,244,255);
+        int[] oreColors={Color.rgb(202,102,53),Color.rgb(164,174,190),Color.rgb(255,192,53),Color.rgb(83,211,255)};
+
+        MineView(Context c){
+            super(c); setLayerType(View.LAYER_TYPE_SOFTWARE,null);
+            p.setAntiAlias(false); text.setTypeface(Typeface.create(Typeface.MONOSPACE,Typeface.BOLD));
+            prefs=c.getSharedPreferences("mine_save",Context.MODE_PRIVATE);
+            load();
+            handler.post(tick);
+        }
+
+        void load(){
+            coins=prefs.getLong("coins",0); totalTaps=prefs.getLong("taps",0); lifetimeCoins=prefs.getLong("life",0);
+            depth=prefs.getInt("depth",1); miningPower=prefs.getInt("power",1); beamWidth=prefs.getInt("width",1); miningSpeed=prefs.getInt("speed",1);
+            backpack=prefs.getInt("bag",30); oreCount=prefs.getInt("oreCount",0); combo=prefs.getInt("combo",0); bestCombo=prefs.getInt("best",0);
+            oreCopper=prefs.getInt("copper",0); oreIron=prefs.getInt("iron",0); oreGold=prefs.getInt("gold",0); oreCrystal=prefs.getInt("crystal",0);
+            lastTime=prefs.getLong("time",System.currentTimeMillis());
+        }
+        void save(){
+            lastTime=System.currentTimeMillis();
+            prefs.edit().putLong("coins",coins).putLong("taps",totalTaps).putLong("life",lifetimeCoins).putInt("depth",depth)
+                .putInt("power",miningPower).putInt("width",beamWidth).putInt("speed",miningSpeed).putInt("bag",backpack)
+                .putInt("oreCount",oreCount).putInt("combo",combo).putInt("best",bestCombo).putInt("copper",oreCopper).putInt("iron",oreIron)
+                .putInt("gold",oreGold).putInt("crystal",oreCrystal).putLong("time",lastTime).apply();
+            lastSave=lastTime;
+        }
+        void applyOffline(){
+            long now=System.currentTimeMillis(); long sec=Math.max(0,Math.min(7200,(now-lastTime)/1000));
+            long earned=sec*(miningPower+miningSpeed*2)/2;
+            if(earned>0){coins+=earned; lifetimeCoins+=earned; passiveCarry=earned;}
+            lastTime=now; invalidate();
+        }
+
+        Runnable tick=new Runnable(){@Override public void run(){
+            long now=System.currentTimeMillis(); float dt=Math.min(.05f,(now-lastFrame)/1000f); lastFrame=now;
+            minerBob+=dt*5; drillPulse+=dt*8; scroll+=dt*(0.8f+depth*.025f);
+            if(beamAlpha>0) beamAlpha-=dt*5;
+            long passive=(long)((miningPower+miningSpeed*2)*dt/3f);
+            if(passive>0){coins+=passive;lifetimeCoins+=passive;}
+            for(OreDrop d:drops){ if(!d.alive)continue; d.vy+=dt*18; d.x+=d.vx; d.y+=d.vy; if(d.y>h*.73f){d.y=h*.73f;d.vy*= -.18f;d.vx*=.88f;} }
+            for(Spark s:sparks){s.life-=dt*2.8f;s.x+=s.vx;s.y+=s.vy;s.vy+=dt*8;}
+            for(int i=drops.size()-1;i>=0;i--)if(!drops.get(i).alive)drops.remove(i);
+            for(int i=sparks.size()-1;i>=0;i--)if(sparks.get(i).life<=0)sparks.remove(i);
+            if(now-lastSave>8000)save();
+            invalidate(); handler.postDelayed(this,16);
+        }};
+
+        @Override protected void onDraw(Canvas c){super.onDraw(c);w=getWidth();h=getHeight();
+            c.drawColor(bg); drawBackdrop(c); drawHeader(c); drawMine(c); drawControls(c); if(shop)drawShop(c); if(bag)drawBag(c);
+        }
+        void rect(Canvas c,float l,float t,float r,float b,int color){p.setColor(color);p.setStyle(Paint.Style.FILL);c.drawRect(l,t,r,b,p);}
+        void stroke(Canvas c,float l,float t,float r,float b,int color,float sw){p.setColor(color);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(sw);c.drawRect(l,t,r,b,p);p.setStyle(Paint.Style.FILL);}
+        void txt(Canvas c,String s,float x,float y,float size,int color){text.setTextSize(size);text.setColor(color);text.setTextAlign(Paint.Align.LEFT);c.drawText(s,x,y,text);}
+        void center(Canvas c,String s,float x,float y,float size,int color){text.setTextSize(size);text.setColor(color);text.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,text);}
+        void round(Canvas c,float l,float t,float r,float b,float rad,int color){p.setColor(color);p.setStyle(Paint.Style.FILL);c.drawRoundRect(new RectF(l,t,r,b),rad,rad,p);}
+
+        void drawBackdrop(Canvas c){
+            for(int i=0;i<12;i++){float yy=(i*170-(scroll*.35f)%170);int shade=Color.rgb(7+i%3*2,12+i%4*2,23+i%5*2);rect(c,0,yy,w,yy+170,shade);}
+            for(int i=0;i<28;i++){float x=(i*83+31)%w;float y=(i*137+(scroll*.7f))%(h*.72f);rect(c,x,y,x+3,y+3,Color.rgb(30,48,70));}
+        }
+        void drawHeader(Canvas c){
+            rect(c,0,0,w,104,Color.rgb(7,14,27)); rect(c,0,100,w,104,blue);
+            txt(c,"PIXEL MINE",22,37,25,white); txt(c,"TYCOON",22,67,18,cyan);
+            panelStat(c,170,14,310,88,"COINS",format(coins),gold); panelStat(c,322,14,462,88,"DEPTH",""+depth+"m",cyan);
+            round(c,w-118,18,w-18,86,16,panel2); center(c,"BAG",w-68,44,12,white); center(c,oreCount+"/"+backpack,w-68,70,17,cyan);
+        }
+        void panelStat(Canvas c,float l,float t,float r,float b,String label,String value,int color){round(c,l,t,r,b,14,panel);txt(c,label,l+12,t+22,10,Color.rgb(140,163,188));txt(c,value,l+12,t+53,20,color);}
+
+        void drawMine(Canvas c){
+            float top=120,bottom=h*.68f; round(c,12,top,w-12,bottom,18,Color.rgb(10,17,29)); stroke(c,12,top,w-12,bottom,Color.rgb(36,70,101),3);
+            // strata
+            int[] strata={Color.rgb(80,57,43),Color.rgb(70,70,78),Color.rgb(57,63,78),Color.rgb(78,53,49),Color.rgb(45,58,75)};
+            for(int i=0;i<5;i++){float sy=top+45+i*88+(scroll%88);rect(c,15,sy,w-15,sy+88,strata[(i+depth)%strata.length]);}
+            // pixel rock pattern
+            for(int i=0;i<60;i++){float x=22+(i*97)%((int)(w-45));float y=top+35+((i*53+(int)scroll*2)%((int)(bottom-top-55)));int col=(i+depth)%4==0?Color.rgb(105,91,87):Color.rgb(53,58,68);rect(c,x,y,x+7,y+5,col);if(i%3==0)rect(c,x+10,y+7,x+14,y+10,col);}
+            // ore clusters
+            for(int i=0;i<14;i++){float x=35+(i*137)%((int)(w-70));float y=top+60+((i*91+(int)scroll*1)%((int)(bottom-top-75)));int oc=(i+depth)%4;drawOreCluster(c,x,y,oc,1.0f);}
+            // miner and beam origin
+            float mx=w*.5f,my=bottom-76+(float)Math.sin(minerBob)*2;
+            drawMiner(c,mx,my);
+            if(beamAlpha>0){drawBeam(c,mx,my-28,beamX,beamY,beamAlpha);}
+            for(OreDrop d:drops)drawOre(c,d.x,d.y,d.type,d.size);
+            for(Spark s:sparks){p.setAlpha((int)(255*Math.max(0,s.life)));rect(c,s.x-2,s.y-2,s.x+4,s.y+4,s.color);p.setAlpha(255);}
+            center(c,"TAP ANYWHERE IN THE MINE TO FIRE",w/2,bottom-10,11,Color.rgb(154,176,201));
+        }
+        void drawMiner(Canvas c,float x,float y){
+            // shadow
+            round(c,x-27,y+27,x+27,y+37,5,Color.argb(100,0,0,0));
+            // legs/boots
+            rect(c,x-17,y+11,x-5,y+31,Color.rgb(34,41,52));rect(c,x+5,y+11,x+17,y+31,Color.rgb(34,41,52));rect(c,x-19,y+27,x-3,y+33,Color.rgb(18,22,28));rect(c,x+3,y+27,x+19,y+33,Color.rgb(18,22,28));
+            // body
+            rect(c,x-20,y-10,x+20,y+15,Color.rgb(29,104,139));rect(c,x-16,y-6,x+16,y+12,Color.rgb(37,135,164));rect(c,x-4,y-2,x+4,y+6,Color.rgb(248,188,62));
+            // arms
+            rect(c,x-28,y-6,x-18,y+12,Color.rgb(246,178,56));rect(c,x+18,y-6,x+28,y+12,Color.rgb(246,178,56));
+            // head
+            rect(c,x-15,y-29,x+15,y-8,Color.rgb(248,191,80));rect(c,x-12,y-26,x+12,y-11,Color.rgb(255,211,120));
+            // helmet
+            rect(c,x-19,y-35,x+19,y-27,Color.rgb(244,178,38));rect(c,x-13,y-40,x+14,y-33,Color.rgb(255,205,49));rect(c,x-22,y-30,x+22,y-26,Color.rgb(215,139,22));rect(c,x-4,y-38,x+5,y-34,Color.rgb(255,232,119));
+            // lamp
+            rect(c,x-4,y-35,x+5,y-30,Color.rgb(240,250,255));
+            // pickaxe
+            p.setColor(Color.rgb(196,211,224));p.setStrokeWidth(4);p.setStyle(Paint.Style.STROKE);c.drawLine(x+20,y+3,x+37,y-20,p);c.drawLine(x+29,y-22,x+42,y-14,p);p.setStyle(Paint.Style.FILL);
+        }
+        void drawBeam(Canvas c,float x1,float y1,float x2,float y2,float alpha){
+            int a=(int)(210*alpha);float dx=x2-x1,dy=y2-y1,len=(float)Math.sqrt(dx*dx+dy*dy);if(len<1)return;float nx=-dy/len,ny=dx/len;float ww=5+beamWidth*4;
+            p.setStrokeCap(Paint.Cap.SQUARE);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(ww*2);p.setColor(Color.argb(a/3,40,190,255));c.drawLine(x1,y1,x2,y2,p);p.setStrokeWidth(ww);p.setColor(Color.argb(a,65,215,255));c.drawLine(x1,y1,x2,y2,p);p.setStrokeWidth(Math.max(2,ww/3));p.setColor(Color.argb(255,230,252,255));c.drawLine(x1,y1,x2,y2,p);p.setStyle(Paint.Style.FILL);
+            for(int i=1;i<5;i++){float q=i/5f;float xx=x1+dx*q,yy=y1+dy*q;rect(c,xx-2,yy-2,xx+2,yy+2,Color.argb(a,255,255,255));}
+        }
+        void drawOreCluster(Canvas c,float x,float y,int type,float s){for(int i=0;i<5;i++){float ox=(i%3-1)*8*s,oy=(i/3-1)*7*s;drawOre(c,x+ox,y+oy,type,s*.9f);}}
+        void drawOre(Canvas c,float x,float y,int type,float s){int col=oreColors[type];rect(c,x-6*s,y-5*s,x+6*s,y+6*s,col);rect(c,x-3*s,y-8*s,x+4*s,y-4*s,light(col));rect(c,x-4*s,y+2*s,x+2*s,y+5*s,dark(col));rect(c,x+2*s,y-2*s,x+5*s,y+1*s,light(col));}
+        int light(int c){return Color.rgb(Math.min(255,Color.red(c)+55),Math.min(255,Color.green(c)+55),Math.min(255,Color.blue(c)+55));}
+        int dark(int c){return Color.rgb(Color.red(c)/2,Color.green(c)/2,Color.blue(c)/2);}
+
+        void drawControls(Canvas c){
+            float y=h*.70f; rect(c,0,y,w,h,bg);
+            // primary mine button
+            round(c,22,y+12,w-22,y+116,22,Color.rgb(17,38,61));stroke(c,22,y+12,w-22,y+116,Color.rgb(50,117,171),3);
+            round(c,w*.5f-76,y+23,w*.5f+76,y+103,40,Color.rgb(28,122,178));stroke(c,w*.5f-76,y+23,w*.5f+76,y+103,Color.rgb(99,224,255),3);
+            center(c,"MINE",w/2,y+59,24,white);center(c,"+"+miningPower+" ORE",w/2,y+84,11,Color.rgb(176,234,255));
+            // lower action cards
+            float by=y+130,bw=(w-70)/3f;
+            button(c,20,by,20+bw,by+82,"SPEED","Lv "+miningSpeed,cyan);
+            button(c,35+bw,by,35+2*bw,by+82,"BEAM","Lv "+beamWidth,gold);
+            button(c,50+2*bw,by,50+3*bw,by+82,"BAG",""+oreCount+"/"+backpack,Color.rgb(151,116,255));
+            txt(c,"SELL ORE",20,by+107,11,Color.rgb(139,161,185));txt(c,"+"+sellValue()+" coins",20,by+126,18,gold);
+            round(c,w-160,by+92,w-20,by+134,14,Color.rgb(24,65,63));center(c,"SELL",w-90,by+119,14,Color.rgb(133,255,221));
+            if(combo>1){center(c,"COMBO x"+combo,w/2,by+112,16,Color.rgb(255,116,238));}
+        }
+        void button(Canvas c,float l,float t,float r,float b,String a,String btxt,int color){round(c,l,t,r,b,15,panel2);stroke(c,l,t,r,b,Color.rgb(43,74,105),2);txt(c,a,l+12,t+27,10,Color.rgb(139,161,185));txt(c,btxt,l+12,t+58,18,color);}
+
+        void drawShop(Canvas c){
+            rect(c,0,0,w,h,Color.argb(190,0,0,0));float l=28,r=w-28,t=145,b=h-110;round(c,l,t,r,b,22,Color.rgb(10,18,31));stroke(c,l,t,r,b,Color.rgb(61,133,188),3);
+            txt(c,"UPGRADE BAY",l+24,t+43,23,white);txt(c,"Spend coins to accelerate your mine",l+24,t+67,11,Color.rgb(144,170,197));
+            shopRow(c,l+18,t+92,"MINING POWER","+1 ore per tap",powerCost(),0,cyan);
+            shopRow(c,l+18,t+180,"MINING SPEED","more passive coins",speedCost(),1,gold);
+            shopRow(c,l+18,t+268,"BEAM WIDTH","larger mining hit",widthCost(),2,Color.rgb(255,95,205));
+            shopRow(c,l+18,t+356,"BACKPACK","+15 ore capacity",bagCost(),3,Color.rgb(132,113,255));
+            center(c,"TAP OUTSIDE TO CLOSE",w/2,b-25,11,Color.rgb(128,152,180));
+        }
+        void shopRow(Canvas c,float x,float y,String title,String sub,long cost,int id,int color){float r=w-46;round(c,x,y,r,y+70,16,panel2);txt(c,title,x+16,y+24,13,white);txt(c,sub,x+16,y+45,10,Color.rgb(136,161,188));round(c,r-120,y+11,r-12,y+59,13,cost<=coins?Color.rgb(29,91,93):Color.rgb(41,49,61));center(c,"$"+format(cost),r-66,y+41,13,cost<=coins?gold:Color.rgb(132,145,163));}
+        void drawBag(Canvas c){
+            rect(c,0,0,w,h,Color.argb(180,0,0,0));float l=26,r=w-26,t=165,b=h-125;round(c,l,t,r,b,22,Color.rgb(10,18,31));txt(c,"ORE SATCHEL",l+22,t+43,23,white);txt(c,"matching pieces merge into richer chunks",l+22,t+65,10,Color.rgb(137,163,190));
+            bagRow(c,l+20,t+94,"COPPER",oreCopper,10,oreColors[0]);bagRow(c,l+20,t+158,"IRON",oreIron,25,oreColors[1]);bagRow(c,l+20,t+222,"GOLD",oreGold,80,oreColors[2]);bagRow(c,l+20,t+286,"CRYSTAL",oreCrystal,200,oreColors[3]);
+            txt(c,"SELL VALUE",l+22,t+374,11,Color.rgb(136,161,188));txt(c,"$"+sellValue(),l+22,t+405,28,gold);center(c,"TAP OUTSIDE TO CLOSE",w/2,b-25,11,Color.rgb(128,152,180));
+        }
+        void bagRow(Canvas c,float x,float y,String name,int count,int value,int color){round(c,x,y,w-46,y+54,14,panel2);drawOreCluster(c,x+30,y+27, name.equals("COPPER")?0:name.equals("IRON")?1:name.equals("GOLD")?2:3,.8f);txt(c,name,x+65,y+23,13,white);txt(c,"x"+count,x+65,y+42,11,Color.rgb(149,171,198));txt(c,"$"+(count*value),w-110,y+32,13,gold);}
+
+        long powerCost(){return 35L*miningPower*miningPower;}
+        long speedCost(){return 50L*miningSpeed*miningSpeed;}
+        long widthCost(){return 90L*beamWidth*beamWidth;}
+        long bagCost(){return 120L*((backpack-15)/15);}
+        int sellValue(){return oreCopper*10+oreIron*25+oreGold*80+oreCrystal*200;}
+        String format(long n){if(n>=1000000)return String.format("%.1fM",n/1000000f);if(n>=1000)return String.format("%.1fK",n/1000f);return ""+n;}
+
+        void doMine(float tx,float ty){
+            if(shop||bag)return;
+            totalTaps++;combo++;bestCombo=Math.max(bestCombo,combo);lastTap=System.currentTimeMillis();
+            int gain=Math.max(1,miningPower+(combo>10?1:0));
+            int free=backpack-oreCount; if(free>0){gain=Math.min(gain,free);for(int i=0;i<gain;i++)addOre(randomOre());oreCount+=gain;}
+            coins+=gain*(1+depth/12);lifetimeCoins+=gain*(1+depth/12);
+            beamX=tx;beamY=ty;beamAlpha=1f;
+            drillPulse=0;for(int i=0;i<7+beamWidth*2;i++)sparks.add(new Spark(tx,ty, i%3==0?gold:cyan));
+            for(int i=0;i<Math.min(3,gain+1);i++)drops.add(new OreDrop(tx+(float)(Math.random()*18-9),ty+(float)(Math.random()*18-9),randomOre(),1f+Math.min(1.5f,depth/30f)));
+            if(totalTaps%25==0){depth++;coins+=25*depth;for(int i=0;i<8;i++)sparks.add(new Spark(w/2,h*.55f,Color.rgb(255,230,112)));}
+            if(System.currentTimeMillis()-lastTap>1300)combo=1;
+            if(combo%12==0)coins+=combo*2;
+            vibrate();
+        }
+        int randomOre(){int roll=rng.nextInt(100);if(depth<5)return roll<70?0:roll<95?1:2;if(depth<15)return roll<48?0:roll<78?1:roll<96?2:3;return roll<28?0:roll<58?1:roll<88?2:3;}
+        void addOre(int t){if(t==0)oreCopper++;else if(t==1)oreIron++;else if(t==2)oreGold++;else oreCrystal++;}
+        void sell(){if(oreCount<=0)return;int v=sellValue();coins+=v;lifetimeCoins+=v;oreCopper=oreIron=oreGold=oreCrystal=0;oreCount=0;for(int i=0;i<12;i++)sparks.add(new Spark(w*.75f,h*.82f,gold));vibrate();}
+        void buy(int id){long cost=id==0?powerCost():id==1?speedCost():id==2?widthCost():bagCost();if(coins<cost)return;coins-=cost;if(id==0)miningPower++;else if(id==1)miningSpeed++;else if(id==2)beamWidth++;else backpack+=15;vibrate();}
+        void vibrate(){try{Vibrator v=(Vibrator)getContext().getSystemService(Context.VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator())v.vibrate(VibrationEffect.createOneShot(18,VibrationEffect.DEFAULT_AMPLITUDE));}catch(Exception ignored){}}
+
+        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_DOWN)return true;float x=e.getX(),y=e.getY();
+            if(shop){if(y>237&&y<307){buy(0);return true;}if(y>325&&y<397){buy(1);return true;}if(y>413&&y<485){buy(2);return true;}if(y>501&&y<573){buy(3);return true;}shop=false;invalidate();return true;}
+            if(bag){bag=false;invalidate();return true;}
+            float cy=h*.70f;if(y>=cy+130&&y<=cy+212){float bw=(w-70)/3f;if(x<20+bw){shop=true;invalidate();return true;}if(x<35+2*bw){shop=true;invalidate();return true;}if(x<50+3*bw){bag=true;invalidate();return true;}}
+            if(y>=cy+92&&y<=cy+134&&x>w-180){sell();return true;}
+            if(y<105&&x>w-135){bag=true;invalidate();return true;}
+            doMine(x,y);invalidate();return true;
+        }
+    }
 }
