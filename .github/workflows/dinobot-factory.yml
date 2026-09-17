@@ -1,0 +1,29 @@
+name: Build DinoBot Factory Android APK
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Reconstruct HTML game
+        run: python3 app/src/main/assets/build_dinobot.py
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build DinoBot Factory APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dinobot-factory-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
