@@ -7,7 +7,7 @@
         android:allowBackup="true"
         android:supportsRtl="true">
         <activity
-            android:name=".MainActivity"
+            android:name="com.example.checklistfirst.MainActivity"
             android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
