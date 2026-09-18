@@ -6,6 +6,7 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
 public class DinoActivity extends Activity {
  private WebView web;
  @Override public void onCreate(Bundle state){
@@ -24,7 +25,10 @@ public class DinoActivity extends Activity {
   s.setBuiltInZoomControls(false);
   s.setDisplayZoomControls(false);
   s.setSupportZoom(false);
-  s.setUseWideViewPort(true);
+  // Let the HTML meta viewport control the CSS viewport on phones.
+  // Wide-view scaling was causing the phone to render the desktop canvas
+  // (and crop the right side) instead of activating the mobile CSS.
+  s.setUseWideViewPort(false);
   s.setLoadWithOverviewMode(false);
   s.setTextZoom(100);
   web.setWebViewClient(new WebViewClient());
